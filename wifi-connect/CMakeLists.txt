@@ -9,6 +9,14 @@ project(wifi-connect C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(PICO_BOARD pico_w)
+set(WIFI_SSID $ENV{WIFI_SSID})
+set(WIFI_PASSWORD $ENV{WIFI_PASSWORD})
+
+if (NOT WIFI_SSID)
+    message(FATAL_ERROR "Please set WIFI_SSID environment variable: export WIFI_SSID=your_ssid")
+elseif(NOT WIFI_PASSWORD)
+    message(FATAL_ERROR "Please set WIFI_PASSWORD environment variable: export WIFI_PASSWORD=your_password")
+endif()
 
 # Creates a pico-sdk subdirectory in our project for the libraries
 pico_sdk_init()
@@ -20,6 +28,9 @@ add_executable(${PROJECT_NAME}
 
 # Create map/bin/hex/uf2 files
 pico_add_extra_outputs(${PROJECT_NAME})
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE WIFI_SSID=${WIFI_SSID})
+target_compile_definitions(${PROJECT_NAME} PRIVATE WIFI_PASSWORD=${WIFI_PASSWORD})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 
