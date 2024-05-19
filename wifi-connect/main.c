@@ -55,4 +55,8 @@ int main()
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
     printf("Connected to " WIFI_SSID_NAME "\n");
+
+    for(;;)
+    {
+    }
 }
