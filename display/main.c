@@ -4,13 +4,14 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "ssd1306.h"
+#include "compute.h"
+#include "compute_face.h"
 
 #define SLEEPTIME 25
 
 i2c_inst_t *setup_gpios(void);
 ssd1306_t setup_dislay(i2c_inst_t *p_i2c_bus);
-void animate_infinitely(ssd1306_t *disp);
-void sliding_words_display(ssd1306_t *disp, char *words, int font_size[], int screen_size[]);
+void draw_image(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, uint8_t image[image_height][image_width]);
 
 int main()
 {
@@ -19,39 +20,34 @@ int main()
     i2c_inst_t *p_i2c_bus = setup_gpios();
     ssd1306_t disp = setup_dislay(p_i2c_bus);
 
-    char *greeting = "Helllloooooooooooooo, World! How you doing today, I got a long string here for you. Hope you can read all of it while the screen scrolls :D. It's a long one, so I hope you're ready for it! Still going ................. and ...... done nice work";
     for (;;)
     {
-        sliding_words_display(&disp, greeting, (int[]){8, 6}, (int[]){32, 128});
+        ssd1306_clear(&disp);
+        draw_image(&disp, compute_face_height, compute_face_width, compute_face);
+        ssd1306_show(&disp);
+
+        sleep_ms(1000);
+
+        ssd1306_clear(&disp);
+        draw_image(&disp, compute_height, compute_width, compute);
+        ssd1306_show(&disp);
+
+        sleep_ms(1000);
     }
 }
 
-void sliding_words_display(ssd1306_t *disp, char *string, int font_size[], int screen_size[])
+void draw_image(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, uint8_t image[image_height][image_width])
 {
-    int str_len = strlen(string);
-    // Sizes are in pixels height x width, font width should include spacing between characters
-    double characters_on_screen = screen_size[1] / font_size[1];
-    int characters_off_screen = str_len - characters_on_screen;
-    int slide_times = characters_off_screen + 1;
-
-    printf("characters_on_screen: %f\n", characters_on_screen);
-    printf("characters_off_screen: %d\n", characters_off_screen);
-    printf("slide_times: %d\n", slide_times);
-
-    for (int i = 0; i < slide_times; ++i)
+    int i, j;
+    for (i = 0; i < image_height; i++)
     {
-        ssd1306_clear(disp);
-
-        char *word_chopped = string + i;
-        ssd1306_draw_string(disp, 1, 1, 1, word_chopped);
-
-        ssd1306_show(disp);
-        if ((i == 0 && slide_times > 1) || i == slide_times - 1)
-            // Longer sleep for start and end of sliding
-            sleep_ms(2000);
-        else
-            sleep_ms(100);
+        for (j = 0; j < image_width; j++)
+        {
+            if (image[i][j] == 0)
+                ssd1306_draw_pixel(disp, j, i);
+        }
     }
+    ssd1306_show(disp);
 }
 
 i2c_inst_t *setup_gpios(void)
@@ -78,53 +74,4 @@ ssd1306_t setup_dislay(i2c_inst_t *p_i2c_bus)
     ssd1306_clear(&disp);
 
     return disp;
-}
-
-void animate_infinitely(ssd1306_t *p_disp)
-{
-    const char *words[] = {"SSD1306", "DISPLAY", "DRIVER"};
-
-    ssd1306_clear(p_disp);
-
-    printf("ANIMATION!\n");
-
-    for (;;)
-    {
-        for (int y = 0; y < 31; ++y)
-        {
-            ssd1306_draw_line(p_disp, 0, y, 127, y);
-            ssd1306_show(p_disp);
-            sleep_ms(SLEEPTIME);
-            ssd1306_clear(p_disp);
-        }
-
-        for (int y = 0, i = 1; y >= 0; y += i)
-        {
-            ssd1306_draw_line(p_disp, 0, 31 - y, 127, 31 + y);
-            ssd1306_draw_line(p_disp, 0, 31 + y, 127, 31 - y);
-            ssd1306_show(p_disp);
-            sleep_ms(SLEEPTIME);
-            ssd1306_clear(p_disp);
-            if (y == 32)
-                i = -1;
-        }
-
-        for (int i = 0; i < sizeof(words) / sizeof(char *); ++i)
-        {
-            ssd1306_draw_string(p_disp, 1, 1, 1, words[i]);
-            ssd1306_show(p_disp);
-            sleep_ms(800);
-            ssd1306_clear(p_disp);
-        }
-
-        for (int y = 31; y >= 0; --y)
-        {
-            ssd1306_draw_line(p_disp, 0, y, 127, y);
-            ssd1306_show(p_disp);
-            sleep_ms(SLEEPTIME);
-            ssd1306_clear(p_disp);
-        }
-
-        ssd1306_show(p_disp);
-    }
 }
