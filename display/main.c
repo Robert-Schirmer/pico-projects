@@ -6,6 +6,7 @@
 #include "ssd1306.h"
 #include "compute.h"
 #include "compute_face.h"
+#include "hello.h"
 
 #define SLEEPTIME 25
 
@@ -22,6 +23,12 @@ int main()
 
     for (;;)
     {
+        ssd1306_clear(&disp);
+        draw_image(&disp, hello_height, hello_width, hello);
+        ssd1306_show(&disp);
+
+        sleep_ms(1000);
+
         ssd1306_clear(&disp);
         draw_image(&disp, compute_face_height, compute_face_width, compute_face);
         ssd1306_show(&disp);
@@ -43,7 +50,7 @@ void draw_image(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, uint
     {
         for (j = 0; j < image_width; j++)
         {
-            if (image[i][j] == 0)
+            if (image[i][j] == 1)
                 ssd1306_draw_pixel(disp, j, i);
         }
     }
