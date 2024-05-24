@@ -4,15 +4,22 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "ssd1306.h"
-#include "compute.h"
-#include "compute_face.h"
-#include "hello.h"
+#include "flowering.c"
 
-#define SLEEPTIME 25
+#define SLEEPTIME 500
+
+const uint8_t screen_height = 32;
+const uint8_t screen_width = 128;
+const uint8_t x_split_point = screen_width / 3 - 1;
+const int font_height = 8;
+const int font_width = 6;
+const int first_line = 0;
+const int second_line = font_height + 3;
+const int third_line = second_line * 2;
 
 i2c_inst_t *setup_gpios(void);
 ssd1306_t setup_dislay(i2c_inst_t *p_i2c_bus);
-void draw_image(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, uint8_t image[image_height][image_width]);
+void draw_frame(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, const uint32_t data_array[]);
 
 int main()
 {
@@ -21,37 +28,45 @@ int main()
     i2c_inst_t *p_i2c_bus = setup_gpios();
     ssd1306_t disp = setup_dislay(p_i2c_bus);
 
+    ssd1306_draw_string(&disp, x_split_point, screen_height / 2 - 5, 1, "Plantingtosh");
+
+    for (uint8_t i = 0; i < FLOWERING_FRAME_COUNT; i++)
+    {
+        ssd1306_clear_square(&disp, 0, 0, x_split_point, screen_height);
+        draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[i]);
+        ssd1306_show(&disp);
+        sleep_ms(SLEEPTIME);
+    }
+
+    ssd1306_clear(&disp);
+    draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[0]);
+    ssd1306_draw_string(&disp, x_split_point, first_line, 1, "Temp:  25 C");
+    ssd1306_draw_string(&disp, x_split_point, second_line, 1, "Light: 10 Lux");
+    ssd1306_draw_string(&disp, x_split_point, third_line, 1, "Moist: Super");
+    ssd1306_show(&disp);
+
     for (;;)
     {
-        ssd1306_clear(&disp);
-        draw_image(&disp, hello_height, hello_width, hello);
-        ssd1306_show(&disp);
-
-        sleep_ms(1000);
-
-        ssd1306_clear(&disp);
-        draw_image(&disp, compute_face_height, compute_face_width, compute_face);
-        ssd1306_show(&disp);
-
-        sleep_ms(1000);
-
-        ssd1306_clear(&disp);
-        draw_image(&disp, compute_height, compute_width, compute);
-        ssd1306_show(&disp);
-
-        sleep_ms(1000);
     }
 }
 
-void draw_image(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, uint8_t image[image_height][image_width])
+void draw_frame(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, const uint32_t data_array[])
 {
-    int i, j;
-    for (i = 0; i < image_height; i++)
+    int i, x, y;
+    for (i = 0; i < image_height * image_width; i++)
     {
-        for (j = 0; j < image_width; j++)
+        if (i % image_width == 0)
         {
-            if (image[i][j] == 1)
-                ssd1306_draw_pixel(disp, j, i);
+            x = 0;
+            y = i / image_width;
+        }
+        else
+        {
+            x++;
+        }
+        if (data_array[i] > 0)
+        {
+            ssd1306_draw_pixel(disp, x, y);
         }
     }
     ssd1306_show(disp);
@@ -77,7 +92,7 @@ ssd1306_t setup_dislay(i2c_inst_t *p_i2c_bus)
 {
     ssd1306_t disp;
     disp.external_vcc = false;
-    ssd1306_init(&disp, 128, 32, 0x3C, p_i2c_bus);
+    ssd1306_init(&disp, screen_width, screen_height, 0x3C, p_i2c_bus);
     ssd1306_clear(&disp);
 
     return disp;
