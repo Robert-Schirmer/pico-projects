@@ -4,7 +4,9 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "ssd1306.h"
+#include "bootselbtn.h"
 #include "flowering.c"
+#include "hello.c"
 
 #define SLEEPTIME 500
 
@@ -19,7 +21,8 @@ const int third_line = second_line * 2;
 
 i2c_inst_t *setup_gpios(void);
 ssd1306_t setup_dislay(i2c_inst_t *p_i2c_bus);
-void draw_frame(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, const uint32_t data_array[]);
+void draw_frame(ssd1306_t *p_disp, uint8_t image_height, uint8_t image_width, const uint32_t data_array[]);
+void do_animation(ssd1306_t *p_disp);
 
 int main()
 {
@@ -28,29 +31,45 @@ int main()
     i2c_inst_t *p_i2c_bus = setup_gpios();
     ssd1306_t disp = setup_dislay(p_i2c_bus);
 
-    ssd1306_draw_string(&disp, x_split_point, screen_height / 2 - 5, 1, "Plantingtosh");
-
-    for (uint8_t i = 0; i < FLOWERING_FRAME_COUNT; i++)
-    {
-        ssd1306_clear_square(&disp, 0, 0, x_split_point, screen_height);
-        draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[i]);
-        ssd1306_show(&disp);
-        sleep_ms(SLEEPTIME);
-    }
-
-    ssd1306_clear(&disp);
-    draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[0]);
-    ssd1306_draw_string(&disp, x_split_point, first_line, 1, "Temp:  25 C");
-    ssd1306_draw_string(&disp, x_split_point, second_line, 1, "Light: 10 Lux");
-    ssd1306_draw_string(&disp, x_split_point, third_line, 1, "Moist: Super");
-    ssd1306_show(&disp);
+    do_animation(&disp);
 
     for (;;)
     {
+        if (get_bootsel_button())
+        {
+            do_animation(&disp);
+        }
+        sleep_ms(10);
     }
 }
 
-void draw_frame(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, const uint32_t data_array[])
+void do_animation(ssd1306_t *p_disp)
+{
+    ssd1306_clear(p_disp);
+    draw_frame(p_disp, HELLO_FRAME_HEIGHT, HELLO_FRAME_WIDTH, hello_data);
+    ssd1306_show(p_disp);
+
+    sleep_ms(2000);
+
+    ssd1306_clear(p_disp);
+    ssd1306_draw_string(p_disp, x_split_point, screen_height / 2 - 5, 1, "Plantingtosh");
+
+    for (uint8_t i = 0; i < FLOWERING_FRAME_COUNT; i++)
+    {
+        ssd1306_clear_square(p_disp, 0, 0, x_split_point, screen_height);
+        draw_frame(p_disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[i]);
+        ssd1306_show(p_disp);
+        sleep_ms(SLEEPTIME);
+    }
+
+    ssd1306_clear_square(p_disp, x_split_point, 0, screen_width - x_split_point, screen_height);
+    ssd1306_draw_string(p_disp, x_split_point, first_line, 1, "Temp  : 25 C");
+    ssd1306_draw_string(p_disp, x_split_point, second_line, 1, "Light : 10 Lux");
+    ssd1306_draw_string(p_disp, x_split_point, third_line, 1, "Moist : Super");
+    ssd1306_show(p_disp);
+}
+
+void draw_frame(ssd1306_t *p_disp, uint8_t image_height, uint8_t image_width, const uint32_t data_array[])
 {
     int i, x, y;
     for (i = 0; i < image_height * image_width; i++)
@@ -66,10 +85,10 @@ void draw_frame(ssd1306_t *disp, uint8_t image_height, uint8_t image_width, cons
         }
         if (data_array[i] > 0)
         {
-            ssd1306_draw_pixel(disp, x, y);
+            ssd1306_draw_pixel(p_disp, x, y);
         }
     }
-    ssd1306_show(disp);
+    ssd1306_show(p_disp);
 }
 
 i2c_inst_t *setup_gpios(void)

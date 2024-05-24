@@ -17,6 +17,7 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME} 
     main.c
     ssd1306.c
+    bootselbtn.c
 )
 
 # Create map/bin/hex/uf2 files
