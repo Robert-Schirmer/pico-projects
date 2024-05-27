@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
     tcp_client.c
     bootselbtn.c
     plant_stats.c
+    mem_helpers.c
 )
 
 # Create map/bin/hex/uf2 files

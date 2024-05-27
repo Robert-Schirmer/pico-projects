@@ -24,6 +24,7 @@ void free_plant_stats(PLANT_STATS_T *plant_stats)
         {
             free(plant_stats->moisture);
         }
+        free(plant_stats);
     }
 }
 

@@ -209,14 +209,11 @@ static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
     if (state->status == 0)
     {
         response->success = true;
-        // Copy response data
-        TCP_SERVER_RESPONSE_T *response = calloc(1, sizeof(TCP_SERVER_RESPONSE_T));
 
         DEBUG_printf("response_result copying used bytes in buffer to response: %d\n", state->buffer_len);
         DEBUG_printf("response_result buffer: %s\n", state->buffer);
-        response->success = true;
         response->data_len = state->buffer_len;
-        response->data = malloc(state->buffer_len);
+        response->data = malloc(state->buffer_len + 1);
         memcpy(response->data, state->buffer, state->buffer_len);
         response->data[state->buffer_len] = '\0';
 

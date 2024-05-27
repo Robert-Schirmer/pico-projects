@@ -11,6 +11,7 @@
 #include "bootselbtn.h"
 #include "flowering.c"
 #include "plant_stats.h"
+#include "mem_helpers.h"
 
 const uint screen_height = 32;
 const uint screen_width = 128;
@@ -74,6 +75,7 @@ int main()
     TCP_SERVER_RESPONSE_T *res;
     absolute_time_t scroll_again_time = get_absolute_time();
     absolute_time_t stat_refresh_time = get_absolute_time();
+    absolute_time_t mem_readout_time = get_absolute_time();
     PLANT_STATS_T *plant_stats = get_current_stats();
 
     while (true)
@@ -93,7 +95,6 @@ int main()
 
                 char *msg_body = serialize_plant_stats(plant_stats);
                 res = send_to_server(msg_body);
-                printf("Response: %s\n", res->data);
                 free(msg_body);
             }
             else
@@ -116,6 +117,12 @@ int main()
             plant_stats = get_current_stats();
             show_current_stats(&disp, plant_stats);
             stat_refresh_time = make_timeout_time_ms(10000);
+        }
+
+        if (absolute_time_diff_us(mem_readout_time, get_absolute_time()) > 0)
+        {
+            printf("free heap: %d\n", get_free_heap());
+            mem_readout_time = make_timeout_time_ms(10000);
         }
 
         sleep_ms(10);
