@@ -58,7 +58,7 @@ class echohandler(StreamRequestHandler):
             end_time = time.time()
             duration = end_time - start_time
             message_content = chat_completion.choices[0].message.content
-            print(f"Request duration: {duration} seconds, response: {message_content}")
+            print(f"Request duration: {duration:.2f}s, response: {message_content}")
             
             self.wfile.write(str.encode(message_content + "END"))
             self.wfile.flush()

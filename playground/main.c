@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "hardware/i2c.h"
@@ -9,6 +10,7 @@
 #include "wifi_cred.h"
 #include "bootselbtn.h"
 #include "flowering.c"
+#include "plant_stats.h"
 
 const uint screen_height = 32;
 const uint screen_width = 128;
@@ -21,20 +23,16 @@ const uint third_line = second_line * 2;
 
 i2c_inst_t *setup_gpios(void);
 ssd1306_t setup_dislay(i2c_inst_t *p_i2c_bus);
-void clear_draw_string_show(ssd1306_t *disp, char *first_line_string, char *second_line_string, char *third_line_string);
-void connect_wifi(ssd1306_t *disp);
+void clear_draw_string_show(ssd1306_t *p_disp, char *first_line_string, char *second_line_string, char *third_line_string);
+void connect_wifi(ssd1306_t *p_disp);
 void draw_frame(ssd1306_t *p_disp, uint image_height, uint image_width, const uint32_t data_array[]);
-void show_current_stats(ssd1306_t *disp);
-
-void draw_plant_response_string(ssd1306_t *p_disp, char *word)
-{
-    ssd1306_clear_square(p_disp, x_split_point, 0, screen_width - x_split_point, screen_height);
-    ssd1306_draw_string(p_disp, x_split_point, second_line, 1, word);
-    ssd1306_show(p_disp);
-}
+void show_current_stats(ssd1306_t *p_disp, PLANT_STATS_T *plant_stats);
+void draw_plant_response_string(ssd1306_t *p_disp, char *word);
 
 int main()
 {
+    srand(time(NULL));
+
     stdio_init_all();
 
     i2c_inst_t *p_i2c_bus = setup_gpios();
@@ -76,6 +74,7 @@ int main()
     TCP_SERVER_RESPONSE_T *res;
     absolute_time_t scroll_again_time = get_absolute_time();
     absolute_time_t stat_refresh_time = get_absolute_time();
+    PLANT_STATS_T *plant_stats = get_current_stats();
 
     while (true)
     {
@@ -83,6 +82,8 @@ int main()
         {
             if (0 == screen)
             {
+                screen = 1;
+
                 stat_refresh_time = get_absolute_time();
 
                 ssd1306_clear(&disp);
@@ -90,18 +91,17 @@ int main()
                 draw_plant_response_string(&disp, "I'm feeling...");
                 ssd1306_show(&disp);
 
-                char *msg = "temp=25C,light=10Lumens,moist=mediam\n";
-                res = send_to_server(msg);
+                char *msg_body = serialize_plant_stats(plant_stats);
+                res = send_to_server(msg_body);
                 printf("Response: %s\n", res->data);
-
-                screen = 1;
+                free(msg_body);
             }
             else
             {
+                screen = 0;
+
                 scroll_again_time = get_absolute_time();
                 free_response(res);
-
-                screen = 0;
             }
         }
 
@@ -112,8 +112,9 @@ int main()
         }
         else if (0 == screen && absolute_time_diff_us(stat_refresh_time, get_absolute_time()) > 0)
         {
-            printf("Refreshing and showing stats");
-            show_current_stats(&disp);
+            free_plant_stats(plant_stats);
+            plant_stats = get_current_stats();
+            show_current_stats(&disp, plant_stats);
             stat_refresh_time = make_timeout_time_ms(10000);
         }
 
@@ -121,16 +122,43 @@ int main()
     }
 }
 
-void show_current_stats(ssd1306_t *p_disp)
+void draw_plant_response_string(ssd1306_t *p_disp, char *word)
+{
+    ssd1306_clear_square(p_disp, x_split_point, 0, screen_width - x_split_point, screen_height);
+    ssd1306_draw_string(p_disp, x_split_point, second_line, 1, word);
+    ssd1306_show(p_disp);
+}
+
+void show_current_stats(ssd1306_t *p_disp, PLANT_STATS_T *plant_stats)
 {
     ssd1306_clear(p_disp);
 
     draw_frame(p_disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[3]);
 
-    ssd1306_draw_string(p_disp, x_split_point, first_line, 1, "Temp  : 25 C");
-    ssd1306_draw_string(p_disp, x_split_point, second_line, 1, "Light : 10 Lux");
-    ssd1306_draw_string(p_disp, x_split_point, third_line, 1, "Moist : Super");
+    char *temp_prefix = "Temp  : ";
+
+    char *temp_str = malloc(strlen(temp_prefix) + strlen(plant_stats->temp) + 1);
+    strcpy(temp_str, temp_prefix);
+    strcat(temp_str, plant_stats->temp);
+
+    char *light_prefix = "Light : ";
+    char *light_str = malloc(strlen(light_prefix) + strlen(plant_stats->light) + 1);
+    strcpy(light_str, light_prefix);
+    strcat(light_str, plant_stats->light);
+
+    char *moisture_prefix = "Moist : ";
+    char *moisture_str = malloc(strlen(moisture_prefix) + strlen(plant_stats->moisture) + 1);
+    strcpy(moisture_str, moisture_prefix);
+    strcat(moisture_str, plant_stats->moisture);
+
+    ssd1306_draw_string(p_disp, x_split_point, first_line, 1, temp_str);
+    ssd1306_draw_string(p_disp, x_split_point, second_line, 1, light_str);
+    ssd1306_draw_string(p_disp, x_split_point, third_line, 1, moisture_str);
     ssd1306_show(p_disp);
+
+    free(temp_str);
+    free(light_str);
+    free(moisture_str);
 
     uint jump_times = 1;
 

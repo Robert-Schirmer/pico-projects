@@ -28,6 +28,7 @@ add_executable(${PROJECT_NAME}
     ssd1306.c
     tcp_client.c
     bootselbtn.c
+    plant_stats.c
 )
 
 # Create map/bin/hex/uf2 files

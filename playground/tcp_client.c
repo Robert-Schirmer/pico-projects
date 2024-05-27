@@ -92,7 +92,7 @@ static err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
     if (err != ERR_OK)
     {
-        printf("connect failed %d\n", err);
+        DEBUG_printf("connect failed %d\n", err);
         return tcp_result(arg, err);
     }
     state->connected = true;
@@ -139,7 +139,7 @@ err_t tcp_client_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
         const uint16_t buffer_left = BUF_SIZE - state->buffer_len;
         if (buffer_left == 0)
         {
-            DEBUG_printf("buffer full\n");
+            DEBUG_printf("recv buffer full\n");
             return tcp_result(arg, -1);
         }
         state->buffer_len += pbuf_copy_partial(p, state->buffer + state->buffer_len,
@@ -148,11 +148,11 @@ err_t tcp_client_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
     }
     pbuf_free(p);
 
-    char *end_cahr =  &state->buffer[state->buffer_len - 3];
+    char *end_cahr = &state->buffer[state->buffer_len - 3];
     if (strcmp("END", end_cahr) == 0)
     {
         state->buffer_len -= 3;
-        DEBUG_printf("Received END\n");
+        DEBUG_printf("recv END\n");
         return tcp_result(arg, ERR_OK);
     }
 
@@ -162,11 +162,11 @@ err_t tcp_client_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 static bool tcp_client_open(void *arg)
 {
     TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
-    DEBUG_printf("Connecting to %s port %u\n", ip4addr_ntoa(&state->remote_addr), TCP_PORT);
+    DEBUG_printf("tcp_client_open connecting to %s port %u\n", ip4addr_ntoa(&state->remote_addr), TCP_PORT);
     state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr));
     if (!state->tcp_pcb)
     {
-        DEBUG_printf("failed to create pcb\n");
+        DEBUG_printf("tcp_client_open failed to create pcb\n");
         return false;
     }
 
@@ -195,7 +195,7 @@ static TCP_CLIENT_T *tcp_client_init(void)
     TCP_CLIENT_T *state = calloc(1, sizeof(TCP_CLIENT_T));
     if (!state)
     {
-        DEBUG_printf("failed to allocate state\n");
+        DEBUG_printf("tcp_client_init failed to allocate state\n");
         return NULL;
     }
     ip4addr_aton(TCP_SERVER_IP, &state->remote_addr);
@@ -212,8 +212,8 @@ static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
         // Copy response data
         TCP_SERVER_RESPONSE_T *response = calloc(1, sizeof(TCP_SERVER_RESPONSE_T));
 
-        DEBUG_printf("Copying used bytes in buffer to response: %d\n", state->buffer_len);
-        DEBUG_printf("Buffer: %s\n", state->buffer);
+        DEBUG_printf("response_result copying used bytes in buffer to response: %d\n", state->buffer_len);
+        DEBUG_printf("response_result buffer: %s\n", state->buffer);
         response->success = true;
         response->data_len = state->buffer_len;
         response->data = malloc(state->buffer_len);
@@ -241,8 +241,10 @@ void free_response(TCP_SERVER_RESPONSE_T *res)
     {
         if (res->data)
         {
+            DEBUG_printf("free_response freeing response data\n");
             free(res->data);
         }
+        DEBUG_printf("free_response freeing response\n");
         free(res);
     }
 }
@@ -262,7 +264,7 @@ TCP_SERVER_RESPONSE_T *send_to_server(char *data)
         return response;
     }
 
-    DEBUG_printf("Sending to server: %s\n", data);
+    DEBUG_printf("send_to_server: %s\n", data);
     tcp_write(state->tcp_pcb, data, strlen(data), TCP_WRITE_FLAG_COPY);
 
     while (!state->complete)
