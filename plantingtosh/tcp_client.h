@@ -32,6 +32,7 @@ typedef struct TCP_CLIENT_T_
     bool complete;
     bool connected;
     int status;
+    char *initial_msg;
 } TCP_CLIENT_T;
 
 typedef struct TCP_SERVER_RESPONSE_T_
@@ -43,6 +44,6 @@ typedef struct TCP_SERVER_RESPONSE_T_
 
 void free_response(TCP_SERVER_RESPONSE_T *res);
 
-TCP_SERVER_RESPONSE_T *send_to_server(char *msg);
+TCP_SERVER_RESPONSE_T *send_to_server(char *msg, void (*work_while_polling)(void *arg, uint poll_count), void *arg);
 
 #endif

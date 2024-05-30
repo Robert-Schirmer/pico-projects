@@ -5,6 +5,7 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "hardware/i2c.h"
+#include "hardware/watchdog.h"
 #include "ssd1306.h"
 #include "tcp_client.h"
 #include "wifi_cred.h"
@@ -29,12 +30,24 @@ void connect_wifi(ssd1306_t *p_disp);
 void draw_frame(ssd1306_t *p_disp, uint image_height, uint image_width, const uint32_t data_array[]);
 void show_current_stats(ssd1306_t *p_disp, PLANT_STATS_T *plant_stats);
 void draw_plant_response_string(ssd1306_t *p_disp, char *word);
+void work_while_send_server(void *p_disp, uint poll_count);
 
 int main()
 {
     srand(time(NULL));
 
     stdio_init_all();
+
+    if (watchdog_caused_reboot())
+    {
+        printf("Rebooted by Watchdog!\n");
+    }
+    else
+    {
+        printf("Clean boot\n");
+    }
+
+    watchdog_enable(7000, false);
 
     i2c_inst_t *p_i2c_bus = setup_gpios();
     ssd1306_t disp = setup_dislay(p_i2c_bus);
@@ -45,7 +58,9 @@ int main()
     ssd1306_show(&disp);
     printf("initializing...\n");
 
+    watchdog_update();
     sleep_ms(1000);
+    watchdog_update();
 
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA))
     {
@@ -59,7 +74,9 @@ int main()
     ssd1306_draw_string(&disp, x_split_point, second_line, 1, "Plantingtosh");
     ssd1306_show(&disp);
 
+    watchdog_update();
     sleep_ms(1000);
+    watchdog_update();
 
     connect_wifi(&disp);
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
@@ -69,7 +86,9 @@ int main()
     ssd1306_draw_string(&disp, x_split_point, second_line, 1, "Plantingtosh");
     ssd1306_show(&disp);
 
+    watchdog_update();
     sleep_ms(1000);
+    watchdog_update();
 
     uint screen = 0;
     TCP_SERVER_RESPONSE_T *res;
@@ -87,14 +106,12 @@ int main()
                 screen = 1;
 
                 stat_refresh_time = get_absolute_time();
-
                 ssd1306_clear(&disp);
                 draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[2]);
-                draw_plant_response_string(&disp, "I'm feeling...");
-                ssd1306_show(&disp);
+                work_while_send_server(&disp, 0);
 
                 char *msg_body = serialize_plant_stats(plant_stats);
-                res = send_to_server(msg_body);
+                res = send_to_server(msg_body, &work_while_send_server, &disp);
                 free(msg_body);
             }
             else
@@ -125,8 +142,29 @@ int main()
             mem_readout_time = make_timeout_time_ms(10000);
         }
 
+        watchdog_update();
         sleep_ms(10);
     }
+}
+
+void work_while_send_server(void *arg, uint poll_count)
+{
+    ssd1306_t *p_disp = (ssd1306_t *)arg;
+    ssd1306_clear_square(p_disp, x_split_point, 0, screen_width - x_split_point, screen_height);
+
+    char *msg_base = "I'm feeling";
+    int dot_count = (poll_count % 30) < 15 ? 2 : 3;
+    char *msg = malloc(strlen(msg_base) + dot_count + 1);
+    strcpy(msg, msg_base);
+    for (int i = 0; i < dot_count; i++)
+    {
+        strcat(msg, ".");
+    }
+
+    draw_plant_response_string(p_disp, msg);
+    ssd1306_show(p_disp);
+    free(msg);
+    watchdog_update();
 }
 
 void draw_plant_response_string(ssd1306_t *p_disp, char *word)
@@ -134,6 +172,7 @@ void draw_plant_response_string(ssd1306_t *p_disp, char *word)
     ssd1306_clear_square(p_disp, x_split_point, 0, screen_width - x_split_point, screen_height);
     ssd1306_draw_string(p_disp, x_split_point, second_line, 1, word);
     ssd1306_show(p_disp);
+    watchdog_update();
 }
 
 void show_current_stats(ssd1306_t *p_disp, PLANT_STATS_T *plant_stats)
@@ -171,6 +210,7 @@ void show_current_stats(ssd1306_t *p_disp, PLANT_STATS_T *plant_stats)
 
     for (uint i = 0; i < jump_times; i++)
     {
+        watchdog_update();
         sleep_ms(500);
         ssd1306_clear_square(p_disp, 0, 0, x_split_point, screen_height);
         draw_frame(p_disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[4]);

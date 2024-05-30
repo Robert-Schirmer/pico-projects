@@ -92,10 +92,21 @@ static err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
     if (err != ERR_OK)
     {
-        DEBUG_printf("connect failed %d\n", err);
+        DEBUG_printf("tcp_client_connected connect failed %d\n", err);
         return tcp_result(arg, err);
     }
     state->connected = true;
+    DEBUG_printf("tcp_client_connected\n");
+    if (state->initial_msg)
+    {
+        err_t err = tcp_write(state->tcp_pcb, state->initial_msg, strlen(state->initial_msg), TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK)
+        {
+            DEBUG_printf("send_to_server: write failed %d\n", err);
+            return tcp_result(state, err);
+        }
+    }
+
     return ERR_OK;
 }
 
@@ -114,6 +125,10 @@ static void tcp_client_err(void *arg, err_t err)
     {
         DEBUG_printf("tcp_client_err %d\n", err);
         tcp_result(arg, err);
+    }
+    else
+    {
+        DEBUG_printf("tcp_client_err %d\n", err);
     }
 }
 
@@ -208,8 +223,8 @@ static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
 
     if (state->status == 0)
     {
+        DEBUG_printf("response_result success\n");
         response->success = true;
-
         DEBUG_printf("response_result copying used bytes in buffer to response: %d\n", state->buffer_len);
         DEBUG_printf("response_result buffer: %s\n", state->buffer);
         response->data_len = state->buffer_len;
@@ -220,6 +235,7 @@ static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
         return response;
     }
 
+    DEBUG_printf("response_result failed\n");
     response->success = false;
     char *error_msg = "Response error (";
     char error_code[2];
@@ -246,13 +262,16 @@ void free_response(TCP_SERVER_RESPONSE_T *res)
     }
 }
 
-TCP_SERVER_RESPONSE_T *send_to_server(char *data)
+TCP_SERVER_RESPONSE_T *send_to_server(char *data, void (*work_while_polling)(void *arg, uint poll_count), void *arg)
 {
     TCP_CLIENT_T *state = tcp_client_init();
     if (!state)
     {
         return response_result(state);
     }
+
+    state->initial_msg = data;
+
     if (!tcp_client_open(state))
     {
         tcp_result(state, ERR_RST);
@@ -260,21 +279,24 @@ TCP_SERVER_RESPONSE_T *send_to_server(char *data)
         free(state);
         return response;
     }
+    DEBUG_printf("send_to_server polling\n");
 
-    DEBUG_printf("send_to_server: %s\n", data);
-    tcp_write(state->tcp_pcb, data, strlen(data), TCP_WRITE_FLAG_COPY);
-
+    uint poll_count = 0;
     while (!state->complete)
     {
         // the following #ifdef is only here so this same example can be used in multiple modes;
         // you do not need it in your code
         // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
         // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
-        // This poll is sometimes hanging?
+
+        // This poll hangs if there is a disconnect (-14 ERR_RST, others?) to the server followed by another successful request to the server
+        // followed by another request, the connection never connects and infinetly hangs
         cyw43_arch_poll();
         // you can poll as often as you like, however if you have nothing else to do you can
         // choose to sleep until either a specified time, or cyw43_arch_poll() has work to do:
         cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
+        work_while_polling(arg, poll_count);
+        poll_count++;
     }
 
     TCP_SERVER_RESPONSE_T *response = response_result(state);
