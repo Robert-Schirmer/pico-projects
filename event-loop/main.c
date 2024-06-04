@@ -13,6 +13,20 @@
 
 QUEUE queue;
 
+void sinlge_work_func0(void)
+{
+    printf("sinlge_work_func0, starting work\n");
+    sleep_ms(2000);
+    printf("sinlge_work_func0, work complete\n");
+}
+
+void sinlge_work_func1(void)
+{
+    printf("sinlge_work_func1, starting work\n");
+    sleep_ms(2000);
+    printf("sinlge_work_func1, work complete\n");
+}
+
 void core1_entry()
 {
     while (true)
@@ -21,6 +35,7 @@ void core1_entry()
         QUEUE_ITEM func = dequeue(&queue);
         if (func.exists)
         {
+            printf("core1_entry, %p\n", func.work_func);
             func.work_func();
         }
 
@@ -33,20 +48,13 @@ typedef struct
     int count;
 } ARGS_T;
 
-void sinlge_work_func()
-{
-    printf("sinlge_work_func, starting work\n");
-    sleep_ms(2000);
-    printf("sinlge_work_func, work complete\n");
-}
-
 void screen_0_load()
 {
     if (0 != get_app_screen())
     {
         return;
     }
-    enqueue(&queue, sinlge_work_func);
+    enqueue(&queue, sinlge_work_func0);
 }
 
 void screen_1_load()
@@ -56,7 +64,7 @@ void screen_1_load()
         return;
     }
 
-    enqueue(&queue, sinlge_work_func);
+    enqueue(&queue, sinlge_work_func1);
 }
 
 void handle_long_button_press()
@@ -109,10 +117,16 @@ int main()
 {
     stdio_init_all();
 
+    // Program won't work with a sleep any lower than this
     sleep_ms(5000);
+    printf("Starting\n");
 
     queue_init(&queue);
 
+    sleep_ms(10);
+    multicore_reset_core1();
+    // Need to sleep for a bit to allow core1 to reset
+    sleep_ms(10);
     multicore_launch_core1(core1_entry);
 
     set_awake_tick_sleep_ms();

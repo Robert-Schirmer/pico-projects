@@ -5,7 +5,7 @@
 #include "pico/mutex.h"
 #include "stack_queue.h"
 
-#if 1
+#if 0
 #define DEBUG_printf printf
 #else
 static void empty_printf(const char *format, ...)
@@ -29,7 +29,7 @@ int enqueue(QUEUE *queue, void (*work_func)(void))
     int new_stack_loop_rear = queue->rear == queue->size - 1 ? 0 : queue->rear + 1;
     if (new_stack_loop_rear == queue->front)
     {
-        printf("equeue QUEUE OVERFLOW, ABORTING\n");
+        printf("enqueue QUEUE OVERFLOW, ABORTING\n");
         mutex_exit(&queue->mutex);
         abort();
     }
@@ -39,7 +39,7 @@ int enqueue(QUEUE *queue, void (*work_func)(void))
     queue->queue[queue->rear].work_func = work_func;
     queue->queue[queue->rear].exists = true;
     mutex_exit(&queue->mutex);
-    DEBUG_printf("equeue complete, front %d rear %d\n", queue->front, queue->rear);
+    DEBUG_printf("enqueue complete, front %d rear %d\n", queue->front, queue->rear);
     return 1;
 }
 

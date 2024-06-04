@@ -10,7 +10,7 @@
 
 typedef struct
 {
-  void (*work_func)();
+  void (*work_func)(void);
   bool exists;
 } QUEUE_ITEM;
 
