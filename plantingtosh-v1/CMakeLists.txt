@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.12)
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 # Set name of project (as PROJECT_NAME) and C/C   standards
-project(plantingtosh C CXX ASM)
+project(plantingtosh-v1 C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(PICO_BOARD pico_w)
@@ -25,12 +25,11 @@ pico_sdk_init()
 # Tell CMake where to find the executable source file
 add_executable(${PROJECT_NAME} 
     main.c
-    bootselbtn.c
-    btnstate.c
     ssd1306.c
     tcp_client.c
-    memory_util.c
-    stack_queue.c
+    bootselbtn.c
+    plant_stats.c
+    mem_helpers.c
 )
 
 # Create map/bin/hex/uf2 files
@@ -46,7 +45,6 @@ target_link_libraries(${PROJECT_NAME}
     pico_cyw43_arch_lwip_poll
     pico_stdlib
     hardware_i2c
-    pico_multicore
 )
 
 # Enable usb output, disable uart output

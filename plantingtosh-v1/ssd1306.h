@@ -271,6 +271,6 @@ void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_
 */
 void ssd1306_draw_string(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const char *s);
 
-void sliding_words_display(ssd1306_t *p, char *string, int font_size[], int screen_size[]);
+void sliding_words_display(ssd1306_t *p, char *string, uint font_width, uint screen_width, void (*ssd1306_draw_string_callback)(ssd1306_t *p, char *s));
 
 #endif

@@ -305,29 +305,27 @@ void ssd1306_show(ssd1306_t *p) {
     fancy_write(p->i2c_i, p->address, p->buffer-1, p->bufsize+1, "ssd1306_show");
 }
 
-void sliding_words_display(ssd1306_t *p, char *string, int font_size[], int screen_size[])
+void sliding_words_display(ssd1306_t *p, char *string, uint font_width, uint display_width, void (*ssd1306_draw_string_callback)(ssd1306_t *p, char *s))
 {
     int str_len = strlen(string);
     // Sizes are in pixels height x width, font width should include spacing between characters
-    double characters_on_screen = screen_size[1] / font_size[1];
-    int characters_off_screen = str_len - characters_on_screen;
-    int slide_times = characters_off_screen + 1;
+    double character_on_display = display_width / font_width;
+    int characters_off_screen = str_len - character_on_display;
+    int slide_times = characters_off_screen < 0 ? 1 : characters_off_screen + 1;
 
-    printf("characters_on_screen: %f\n", characters_on_screen);
+    printf("character_on_display: %f\n", character_on_display);
     printf("characters_off_screen: %d\n", characters_off_screen);
     printf("slide_times: %d\n", slide_times);
 
     for (int i = 0; i < slide_times; ++i)
     {
-        ssd1306_clear(p);
-
         char *word_chopped = string + i;
-        ssd1306_draw_string(p, 1, 1, 1, word_chopped);
+        
+        (*ssd1306_draw_string_callback)(p, word_chopped);
 
-        ssd1306_show(p);
         if ((i == 0 && slide_times > 1) || i == slide_times - 1)
             // Longer sleep for start and end of sliding
-            sleep_ms(2000);
+            sleep_ms(1000);
         else
             sleep_ms(100);
     }
