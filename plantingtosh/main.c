@@ -284,10 +284,10 @@ void clear_draw_string_show(ssd1306_t *disp, char *first_line_string, char *seco
 
 i2c_inst_t *setup_gpios(void)
 {
-    uint sda_pin = 18;
-    uint scl_pin = 19;
+    uint sda_pin = 16;
+    uint scl_pin = 17;
     uint baudrate = 400 * 1000;
-    i2c_inst_t *i2c_bus = i2c1;
+    i2c_inst_t *i2c_bus = i2c0;
 
     i2c_init(i2c_bus, baudrate);
     gpio_set_function(sda_pin, GPIO_FUNC_I2C);
