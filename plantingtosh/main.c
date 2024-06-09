@@ -23,6 +23,7 @@ typedef enum
     NONE,
     BTN_1_SHORT_PRESS,
     BTN_1_LONG_PRESS,
+    BTN_1_LONG_HOLD,
 } EVENT_T;
 
 typedef enum
@@ -50,6 +51,15 @@ const uint third_line = second_line * 2;
 
 int temp_unit = FAHRENHEIT;
 
+#if 0
+#define DEBUG_printf printf
+#else
+static void empty_printf(const char *format, ...)
+{
+}
+#define DEBUG_printf empty_printf
+#endif
+
 void core1_entry()
 {
     while (true)
@@ -68,7 +78,7 @@ void core1_entry()
 
 void refresh_plant_stats()
 {
-    printf("refresh_plant_stats\n");
+    DEBUG_printf("refresh_plant_stats\n");
     PLANT_STATS_T *stats = get_current_stats(&sensor);
 
     int temp_tenths = temp_unit == CELCIUS ? stats->temp : (stats->temp * 9) / 5 + 320;
@@ -96,26 +106,31 @@ void refresh_plant_stats()
     ssd1306_draw_string(&disp, x_split_point, second_line, 1, moisture_str);
     ssd1306_show(&disp);
 
-    printf("refresh_plant_stats, %s\n", temp_str);
-    printf("refresh_plant_stats, %s\n", moisture_str);
+    DEBUG_printf("refresh_plant_stats, %s\n", temp_str);
+    DEBUG_printf("refresh_plant_stats, %s\n", moisture_str);
 
     free(stats);
     free(temp_str);
     free(moisture_str);
 
-    printf("refresh_plant_status, done\n");
+    DEBUG_printf("refresh_plant_status, done\n");
 }
 
 void handle_long_button_press()
 {
     printf("handle_long_button_press\n");
-    temp_unit = temp_unit == CELCIUS ? FAHRENHEIT : CELCIUS;
-    refresh_plant_stats();
 }
 
 void handle_short_button_press()
 {
     printf("handle_short_button_press\n");
+    refresh_plant_stats();
+}
+
+void handle_long_hold()
+{
+    printf("handle_long_hold\n");
+    temp_unit = temp_unit == CELCIUS ? FAHRENHEIT : CELCIUS;
     refresh_plant_stats();
 }
 
@@ -131,6 +146,9 @@ void main_tick()
         break;
     case BTN_1_SHORT_PRESS:
         handle_short_button_press();
+        break;
+    case BTN_1_LONG_HOLD:
+        handle_long_hold();
         break;
     case NONE:
         // Nothing to do, just keep looping
@@ -191,6 +209,9 @@ int main()
 
     int btn_1_long_press = BTN_1_LONG_PRESS;
     int btn_1_short_press = BTN_1_SHORT_PRESS;
+    int btn_1_long_hold = BTN_1_LONG_HOLD;
+
+    bool long_hold_handled = false;
 
     while (true)
     {
@@ -198,14 +219,29 @@ int main()
 
         if (btn_state.released)
         {
-            if (LONG_PRESS == btn_state.release_type)
+            if (long_hold_handled)
             {
-                enqueue(&event_queue, &btn_1_long_press);
+                // Long hold already handled this release, reset
+                long_hold_handled = false;
             }
-            else if (SHORT_PRESS == btn_state.release_type)
+            else
             {
-                enqueue(&event_queue, &btn_1_short_press);
+                if (LONG_PRESS == btn_state.release_type)
+                {
+                    enqueue(&event_queue, &btn_1_long_press);
+                }
+                else if (SHORT_PRESS == btn_state.release_type)
+                {
+                    enqueue(&event_queue, &btn_1_short_press);
+                }
             }
+        }
+        else if (btn_state.long_hold && !long_hold_handled)
+        {
+            // Flag the long hold as handled so button release doesn't
+            // trigger another handling
+            long_hold_handled = true;
+            enqueue(&event_queue, &btn_1_long_hold);
         }
 
         main_tick();

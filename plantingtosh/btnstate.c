@@ -8,14 +8,16 @@ absolute_time_t btn_press_began;
 
 BTN_TICK_STATE_T btn_state_tick(void)
 {
-  BTN_TICK_STATE_T btn_state = {false, 0, false};
+  BTN_TICK_STATE_T btn_state = {false, 0, false, false};
 
   btn_state.pressed = get_bootsel_button();
 
+  int elapsed_since_press_us = absolute_time_diff_us(btn_press_began, get_absolute_time());
+
   if (btn_prev_pressed && !btn_state.pressed)
   {
-    int elapsed = absolute_time_diff_us(btn_press_began, get_absolute_time());
-    if (elapsed < 800000)
+    // Released
+    if (elapsed_since_press_us < LONG_PRESS_THRESHOLD_MS * 1000)
     {
       btn_state.release_type = SHORT_PRESS;
     }
@@ -28,7 +30,12 @@ BTN_TICK_STATE_T btn_state_tick(void)
   }
   else if (!btn_prev_pressed && btn_state.pressed)
   {
+    // Just started pressing
     btn_press_began = get_absolute_time();
+  }
+  else if (btn_state.pressed && elapsed_since_press_us > LONG_HOLD_THRESHOLD_MS * 1000)
+  {
+    btn_state.long_hold = true;
   }
 
   btn_prev_pressed = btn_state.pressed;

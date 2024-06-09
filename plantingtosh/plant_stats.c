@@ -7,14 +7,23 @@
 #include "plant_stats.h"
 #include "moisture_sensor.h"
 
+#if 0
+#define DEBUG_printf printf
+#else
+static void empty_printf(const char *format, ...)
+{
+}
+#define DEBUG_printf empty_printf
+#endif
+
 PLANT_STATS_T *get_current_stats(moisture_sensor_t *sensor)
 {
-    printf("get_current_stats\n");
+    DEBUG_printf("get_current_stats\n");
 
     PLANT_STATS_T *plant_stats = calloc(1, sizeof(PLANT_STATS_T));
 
     int busy = is_sensor_busy(sensor);
-    printf("get_current_stats, sensor busy: %d\n", busy);
+    DEBUG_printf("get_current_stats, sensor busy: %d\n", busy);
 
     plant_stats->temp = get_sensor_temperature(sensor);
     plant_stats->capacitence = get_sensor_capacitance(sensor);
