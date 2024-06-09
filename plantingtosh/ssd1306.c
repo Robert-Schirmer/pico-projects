@@ -332,3 +332,25 @@ void sliding_words_display(ssd1306_t *p, char *string, int font_size[], int scre
             sleep_ms(100);
     }
 }
+
+void draw_frame(ssd1306_t *p_disp, uint image_height, uint image_width, const uint32_t data_array[])
+{
+    int i, x, y;
+    for (i = 0; i < image_height * image_width; i++)
+    {
+        if (i % image_width == 0)
+        {
+            x = 0;
+            y = i / image_width;
+        }
+        else
+        {
+            x++;
+        }
+        if (data_array[i] > 0)
+        {
+            ssd1306_draw_pixel(p_disp, x, y);
+        }
+    }
+    ssd1306_show(p_disp);
+}
