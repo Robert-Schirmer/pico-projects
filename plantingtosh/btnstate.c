@@ -15,7 +15,7 @@ BTN_TICK_STATE_T btn_state_tick(void)
   if (btn_prev_pressed && !btn_state.pressed)
   {
     int elapsed = absolute_time_diff_us(btn_press_began, get_absolute_time());
-    if (elapsed < 1000000)
+    if (elapsed < 800000)
     {
       btn_state.release_type = SHORT_PRESS;
     }

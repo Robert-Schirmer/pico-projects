@@ -10,10 +10,8 @@
 #include "stack_queue.h"
 #include "memory_util.h"
 
-QUEUE stack_queue;
+QUEUE stacks_queue;
 QUEUE event_queue;
-
-int tick_speed = 100;
 
 typedef enum
 {
@@ -30,16 +28,20 @@ void core1_entry()
     while (true)
     {
         // If no events, dequeue a stack function
-        QUEUE_ITEM func = dequeue(&stack_queue);
-        if (func.exists)
+        QUEUE_ITEM stack = dequeue(&stacks_queue);
+        if (stack.exists)
         {
-            void *execute_func = func.item;
-            printf("core1_entry, %p\n", execute_func);
+            void *execute_func = stack.item;
             ((void (*)(void))execute_func)();
         }
 
-        sleep_ms(tick_speed);
+       sleep_ms(1000);
     }
+}
+
+void test_func()
+{
+    printf("test_func\n");
 }
 
 void handle_long_button_press()
@@ -50,6 +52,7 @@ void handle_long_button_press()
 void handle_short_button_press()
 {
     printf("handle_short_button_press\n");
+    enqueue(&stacks_queue, &test_func);
 }
 
 void main_tick()
@@ -78,17 +81,16 @@ int main()
 {
     stdio_init_all();
 
-    // Program won't work with a sleep any lower than this
-    printf("Starting\n");
+    queue_init(&stacks_queue, 10);
+    queue_init(&event_queue, 5);
 
-    // queue_init(&stack_queue);
-    queue_init(&event_queue);
-
-    sleep_ms(10);
+    printf("Starting core\n");
     multicore_reset_core1();
     // Need to sleep for a bit to allow core1 to reset
     sleep_ms(10);
     multicore_launch_core1(core1_entry);
+    // Wait for core to start
+    sleep_ms(5000);
 
     int btn_1_long_press = BTN_1_LONG_PRESS;
     int btn_1_short_press = BTN_1_SHORT_PRESS;
@@ -112,6 +114,6 @@ int main()
         main_tick();
 
         print_free_heap();
-        sleep_ms(tick_speed);
+        sleep_ms(100);
     }
 }

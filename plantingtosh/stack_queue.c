@@ -14,11 +14,12 @@ static void empty_printf(const char *format, ...)
 #define DEBUG_printf empty_printf
 #endif
 
-void queue_init(QUEUE *queue)
+void queue_init(QUEUE *queue, int size)
 {
-    queue->size = QUEUE_SIZE;
-    queue->front = -1;
-    queue->rear = 0;
+    queue->queue = malloc(sizeof(QUEUE_ITEM) * size);
+    queue->size = size;
+    queue->front = 0;
+    queue->rear = 1;
     mutex_init(&queue->mutex);
 }
 

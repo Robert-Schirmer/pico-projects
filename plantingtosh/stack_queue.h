@@ -6,8 +6,6 @@
 #ifndef _CIRCLE_BUFFER_QUEUE_H
 #define _CIRCLE_BUFFER_QUEUE_H
 
-#define QUEUE_SIZE 5
-
 typedef struct
 {
   void *item;
@@ -16,14 +14,14 @@ typedef struct
 
 typedef struct
 {
-  QUEUE_ITEM queue[QUEUE_SIZE];
+  QUEUE_ITEM *queue;
   int front;
   int rear;
   int size;
   mutex_t mutex;
 } QUEUE;
 
-void queue_init(QUEUE *queue);
+void queue_init(QUEUE *queue, int size);
 
 int enqueue(QUEUE *queue, void *item);
 QUEUE_ITEM dequeue(QUEUE *queue);
