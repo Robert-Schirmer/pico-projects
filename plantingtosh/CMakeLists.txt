@@ -30,7 +30,7 @@ add_executable(${PROJECT_NAME}
     ssd1306.c
     tcp_client.c
     memory_util.c
-    stack_queue.c
+    queue.c
     moisture_sensor.c
     plant_stats.c
 )

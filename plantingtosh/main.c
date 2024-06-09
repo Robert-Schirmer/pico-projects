@@ -7,7 +7,7 @@
 #include "bootselbtn.h"
 #include "btnstate.h"
 #include "btnstate.h"
-#include "stack_queue.h"
+#include "queue.h"
 #include "memory_util.h"
 #include "ssd1306.h"
 #include "flowering.c"
@@ -32,7 +32,7 @@ typedef enum
     FAHRENHEIT
 } TEMP_UNIT_T;
 
-QUEUE stacks_queue;
+QUEUE stack_queue;
 QUEUE event_queue;
 
 ssd1306_t disp;
@@ -65,7 +65,7 @@ void core1_entry()
     while (true)
     {
         // If no events, dequeue a stack function
-        QUEUE_ITEM stack = dequeue(&stacks_queue);
+        QUEUE_ITEM stack = dequeue(&stack_queue);
         if (stack.exists)
         {
             void *execute_func = stack.item;
@@ -183,7 +183,7 @@ int main()
 {
     stdio_init_all();
 
-    queue_init(&stacks_queue, 10);
+    queue_init(&stack_queue, 10);
     queue_init(&event_queue, 5);
 
     setup_gpios();

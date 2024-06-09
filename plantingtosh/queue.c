@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "pico/mutex.h"
-#include "stack_queue.h"
+#include "queue.h"
 
 #if 0
 #define DEBUG_printf printf
@@ -61,8 +61,8 @@ QUEUE_ITEM dequeue(QUEUE *queue)
     queue->front = new_stack_loop_front;
 
     // Index into the loop stack one past the front since the front is set to always trail the rear by at least one
-    int event_index = queue->front == queue->size - 1 ? 0 : queue->front + 1;
+    int queue_index = queue->front == queue->size - 1 ? 0 : queue->front + 1;
     mutex_exit(&queue->mutex);
     DEBUG_printf("dequeue complete, front %d rear %d\n", queue->front, queue->rear);
-    return queue->queue[event_index];
+    return queue->queue[queue_index];
 }
