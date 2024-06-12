@@ -18,8 +18,7 @@ add_executable(${PROJECT_NAME}
     main.c
     bootselbtn.c
     btnstate.c
-    event_queue.c
-    stack_queue.c
+    queue.c
     app_state.c
     memory_util.c
 )

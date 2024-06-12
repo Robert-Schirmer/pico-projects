@@ -6,12 +6,22 @@
 #include <malloc.h>
 #include "bootselbtn.h"
 #include "btnstate.h"
-#include "event_queue.h"
-#include "stack_queue.h"
+#include "queue.h"
 #include "app_state.h"
 #include "memory_util.h"
 
-QUEUE queue;
+QUEUE stack_queue;
+QUEUE event_queue;
+
+typedef enum
+{
+    /**
+     * Signals that there are no events in the queue
+     */
+    NONE,
+    BTN_1_SHORT_PRESS,
+    BTN_1_LONG_PRESS,
+} EVENT_T;
 
 void sinlge_work_func0(void)
 {
@@ -32,11 +42,11 @@ void core1_entry()
     while (true)
     {
         // If no events, dequeue a stack function
-        QUEUE_ITEM func = dequeue(&queue);
+        QUEUE_ITEM func = dequeue(&stack_queue);
         if (func.exists)
         {
-            printf("core1_entry, %p\n", func.work_func);
-            func.work_func();
+            printf("core1_entry, %p\n", func.item);
+            ((void (*)(void))func.item)();
         }
 
         sleep_ms(get_tick_sleep_ms());
@@ -54,7 +64,8 @@ void screen_0_load()
     {
         return;
     }
-    enqueue(&queue, sinlge_work_func0);
+
+    enqueue(&stack_queue, sinlge_work_func0);
 }
 
 void screen_1_load()
@@ -64,7 +75,7 @@ void screen_1_load()
         return;
     }
 
-    enqueue(&queue, sinlge_work_func1);
+    enqueue(&stack_queue, sinlge_work_func1);
 }
 
 void handle_long_button_press()
@@ -94,7 +105,13 @@ void handle_short_button_press()
 
 void main_tick()
 {
-    EVENT_T event = dequeue_event();
+    EVENT_T event = NONE;
+
+    QUEUE_ITEM item = dequeue(&event_queue);
+    if (item.exists)
+    {
+        event = *(EVENT_T *)item.item;
+    }
 
     switch (event)
     {
@@ -121,7 +138,8 @@ int main()
     sleep_ms(5000);
     printf("Starting\n");
 
-    queue_init(&queue);
+    queue_init(&stack_queue, 10);
+    queue_init(&event_queue, 10);
 
     sleep_ms(10);
     multicore_reset_core1();
@@ -133,6 +151,9 @@ int main()
 
     screen_0_load();
 
+    int btn_1_long_press = BTN_1_LONG_PRESS;
+    int btn_1_short_press = BTN_1_SHORT_PRESS;
+
     while (true)
     {
         BTN_TICK_STATE_T btn_state = btn_state_tick();
@@ -141,11 +162,11 @@ int main()
         {
             if (LONG_PRESS == btn_state.release_type)
             {
-                enqueue_event(BTN_1_LONG_PRESS);
+                enqueue(&event_queue, &btn_1_long_press);
             }
             else if (SHORT_PRESS == btn_state.release_type)
             {
-                enqueue_event(BTN_1_SHORT_PRESS);
+                enqueue(&event_queue, &btn_1_short_press);
             }
         }
 
