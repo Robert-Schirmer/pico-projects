@@ -16,7 +16,6 @@ void core1_entry()
     while (true)
     {
         set_task_alive(1);
-        printf("Core 1 alive\n");
         if (absolute_time_diff_us(death_clock, get_absolute_time()) > kill_after_ms * 1000)
         {
             printf("Core 1 hanging itself\n");
@@ -59,8 +58,6 @@ int main()
     while (true)
     {
         set_task_alive(0);
-        printf("Core 0 alive\n");
-        sleep_ms(100);
         tasks_watchdog_update();
     }
 }
