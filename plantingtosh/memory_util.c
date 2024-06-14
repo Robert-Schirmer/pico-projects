@@ -18,19 +18,9 @@ uint32_t get_free_heap(void)
 }
 
 absolute_time_t last_free_heap_print;
-int last_free_heap = -1;
-uint print_free_heap_interval_s = 5;
 
 void print_free_heap(void)
 {
-    if (absolute_time_diff_us(last_free_heap_print, get_absolute_time()) < 1000000 * print_free_heap_interval_s)
-    {
-        return;
-    }
     int free_heap = get_free_heap();
-    int diff = -1 == last_free_heap ? 0 : last_free_heap - free_heap;
-    printf("Free heap: %d, Diff: %d\n", free_heap, diff);
-
-    last_free_heap_print = get_absolute_time();
-    last_free_heap = free_heap;
+    printf("Free heap: %d\n", free_heap);
 }

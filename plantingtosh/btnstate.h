@@ -18,6 +18,6 @@ typedef struct
   bool pressed;
 } BTN_TICK_STATE_T;
 
-BTN_TICK_STATE_T btn_state_tick();
+BTN_TICK_STATE_T btn_state_tick(uint gpio);
 
 #endif

@@ -18,7 +18,6 @@
 
 #define TCP_SERVER_IP "192.168.1.220"
 #define TCP_PORT 4242
-#define DEBUG_printf printf
 #define BUF_SIZE 2048
 
 #define POLL_TIME_S 5
@@ -44,6 +43,6 @@ typedef struct TCP_SERVER_RESPONSE_T_
 
 void free_response(TCP_SERVER_RESPONSE_T *res);
 
-TCP_SERVER_RESPONSE_T *send_to_server(char *msg, void (*work_while_polling)(void *arg, uint poll_count), void *arg);
+TCP_SERVER_RESPONSE_T *send_to_server(char *msg);
 
 #endif

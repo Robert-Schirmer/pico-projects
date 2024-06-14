@@ -25,14 +25,14 @@ pico_sdk_init()
 # Tell CMake where to find the executable source file
 add_executable(${PROJECT_NAME} 
     main.c
-    bootselbtn.c
     btnstate.c
     ssd1306.c
     tcp_client.c
     memory_util.c
-    queue.c
     moisture_sensor.c
     plant_stats.c
+    background_tasks.c
+    tasks_watchdog.c
 )
 
 # Create map/bin/hex/uf2 files

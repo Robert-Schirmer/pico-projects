@@ -7,7 +7,7 @@
 #include "plant_stats.h"
 #include "moisture_sensor.h"
 
-#if 0
+#if 1
 #define DEBUG_printf printf
 #else
 static void empty_printf(const char *format, ...)
@@ -20,10 +20,30 @@ PLANT_STATS_T *get_current_stats(moisture_sensor_t *sensor)
 {
     DEBUG_printf("get_current_stats\n");
 
-    PLANT_STATS_T *plant_stats = calloc(1, sizeof(PLANT_STATS_T));
+    // Initialize the sensor by reading
+    get_sensor_temperature(sensor);
+    get_sensor_capacitance(sensor);
 
-    int busy = is_sensor_busy(sensor);
-    DEBUG_printf("get_current_stats, sensor busy: %d\n", busy);
+    int abort_after_ms = 1000;
+    absolute_time_t start_time = get_absolute_time();
+
+    int sensor_busy = 1;
+
+    // Wait for the sensor to not be busy
+    do
+    {
+        sensor_busy = is_sensor_busy(sensor);
+        DEBUG_printf("get_current_stats, sensor busy: %d\n", sensor_busy);
+
+        if (absolute_time_diff_us(start_time, get_absolute_time()) > abort_after_ms * 1000)
+        {
+            DEBUG_printf("get_current_stats, aborting after %d ms\n", abort_after_ms);
+            break;
+        }
+
+    } while (sensor_busy == 1);
+
+    PLANT_STATS_T *plant_stats = calloc(1, sizeof(PLANT_STATS_T));
 
     plant_stats->temp = get_sensor_temperature(sensor);
     plant_stats->capacitence = get_sensor_capacitance(sensor);
@@ -31,23 +51,23 @@ PLANT_STATS_T *get_current_stats(moisture_sensor_t *sensor)
     return plant_stats;
 }
 
-// char *serialize_plant_stats(PLANT_STATS_T *plant_stats)
-// {
-//     char *temp_prefix = "temp=";
-//     char *moisture_prefix = "moist=";
-//     char *terminator = "\n";
+char *serialize_plant_stats(PLANT_STATS_T *plant_stats)
+{
+    char *temp_prefix = "temp=";
+    char *capacitence_prefix = "capacitence=";
+    char *terminator = "\n";
 
-//     char *serialized = malloc(strlen(temp_prefix) + strlen(plant_stats->temp) +
-//                               strlen(moisture_prefix) + strlen(plant_stats->moisture) +
-//                               // Plus commas and null terminator
-//                               strlen(terminator) + 2 + 1);
-//     strcpy(serialized, temp_prefix);
-//     strcat(serialized, plant_stats->temp);
-//     strcat(serialized, ",");
-//     strcat(serialized, ",");
-//     strcat(serialized, moisture_prefix);
-//     strcat(serialized, plant_stats->moisture);
-//     strcat(serialized, terminator);
+    // Plus 2 if negative for the minus sign and the digit less than 10 that drops to a decimal place
+    int temp_str_length = log10(abs(plant_stats->temp)) + (plant_stats->temp >= 0 ? 1 : 2);
+    int capacitence_str_length = log10(abs(plant_stats->capacitence)) + (plant_stats->capacitence >= 0 ? 1 : 2);
 
-//     return serialized;
-// }
+    DEBUG_printf("serialize_plant_stats, temp_str_length: %d, capacitence_str_length: %d\n", temp_str_length, capacitence_str_length);
+
+    char *serialized = malloc(strlen(temp_prefix) + temp_str_length +
+                              strlen(capacitence_prefix) + capacitence_str_length +
+                              // Plus commas and null terminator
+                              strlen(terminator) + 1 + 1);
+    sprintf(serialized, "%s%d,%s%d%s", temp_prefix, plant_stats->temp, capacitence_prefix, plant_stats->capacitence, terminator);
+
+    return serialized;
+}

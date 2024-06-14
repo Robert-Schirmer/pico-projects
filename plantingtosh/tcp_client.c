@@ -39,6 +39,15 @@ static void dump_bytes(const uint8_t *bptr, uint32_t len)
 #define DUMP_BYTES(A, B)
 #endif
 
+#if 0
+#define DEBUG_printf printf
+#else
+static void empty_printf(const char *format, ...)
+{
+}
+#define DEBUG_printf empty_printf
+#endif
+
 static err_t tcp_client_close(void *arg)
 {
     TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
@@ -262,7 +271,7 @@ void free_response(TCP_SERVER_RESPONSE_T *res)
     }
 }
 
-TCP_SERVER_RESPONSE_T *send_to_server(char *data, void (*work_while_polling)(void *arg, uint poll_count), void *arg)
+TCP_SERVER_RESPONSE_T *send_to_server(char *data)
 {
     TCP_CLIENT_T *state = tcp_client_init();
     if (!state)
@@ -281,7 +290,6 @@ TCP_SERVER_RESPONSE_T *send_to_server(char *data, void (*work_while_polling)(voi
     }
     DEBUG_printf("send_to_server polling\n");
 
-    uint poll_count = 0;
     while (!state->complete)
     {
         // the following #ifdef is only here so this same example can be used in multiple modes;
@@ -294,9 +302,7 @@ TCP_SERVER_RESPONSE_T *send_to_server(char *data, void (*work_while_polling)(voi
         cyw43_arch_poll();
         // you can poll as often as you like, however if you have nothing else to do you can
         // choose to sleep until either a specified time, or cyw43_arch_poll() has work to do:
-        cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
-        work_while_polling(arg, poll_count);
-        poll_count++;
+        cyw43_arch_wait_for_work_until(make_timeout_time_ms(10));
     }
 
     TCP_SERVER_RESPONSE_T *response = response_result(state);

@@ -1,16 +1,15 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "btnstate.h"
-#include "bootselbtn.h"
+#include "hardware/gpio.h"
 
-bool btn_prev_pressed = false;
-absolute_time_t btn_press_began;
+static bool btn_prev_pressed = false;
+static absolute_time_t btn_press_began;
 
-BTN_TICK_STATE_T btn_state_tick(void)
+BTN_TICK_STATE_T btn_state_tick(uint gpio)
 {
   BTN_TICK_STATE_T btn_state = {false, 0, false, false};
-
-  btn_state.pressed = get_bootsel_button();
+  btn_state.pressed = !gpio_get(gpio);
 
   int elapsed_since_press_us = absolute_time_diff_us(btn_press_began, get_absolute_time());
 
