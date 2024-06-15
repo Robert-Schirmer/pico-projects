@@ -33,6 +33,9 @@ add_executable(${PROJECT_NAME}
     plant_stats.c
     background_tasks.c
     tasks_watchdog.c
+    screen_manager.c
+    board_id.c
+    utils.c
 )
 
 # Create map/bin/hex/uf2 files
@@ -47,6 +50,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 target_link_libraries(${PROJECT_NAME} 
     pico_cyw43_arch_lwip_poll
     pico_stdlib
+    pico_unique_id
     hardware_i2c
     pico_multicore
 )

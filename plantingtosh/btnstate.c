@@ -3,17 +3,24 @@
 #include "btnstate.h"
 #include "hardware/gpio.h"
 
-static bool btn_prev_pressed = false;
-static absolute_time_t btn_press_began;
+void init_btn(BTN_T *btn, uint gpio)
+{
+  btn->gpio = gpio;
+  btn->btn_prev_pressed = false;
 
-BTN_TICK_STATE_T btn_state_tick(uint gpio)
+  gpio_init(gpio);
+  gpio_set_dir(gpio, GPIO_IN);
+  gpio_pull_up(gpio);
+}
+
+BTN_TICK_STATE_T btn_state_tick(BTN_T *btn)
 {
   BTN_TICK_STATE_T btn_state = {false, 0, false, false};
-  btn_state.pressed = !gpio_get(gpio);
+  btn_state.pressed = !gpio_get(btn->gpio);
 
-  int elapsed_since_press_us = absolute_time_diff_us(btn_press_began, get_absolute_time());
+  int elapsed_since_press_us = absolute_time_diff_us(btn->btn_press_began, get_absolute_time());
 
-  if (btn_prev_pressed && !btn_state.pressed)
+  if (btn->btn_prev_pressed && !btn_state.pressed)
   {
     // Released
     if (elapsed_since_press_us < LONG_PRESS_THRESHOLD_MS * 1000)
@@ -27,17 +34,17 @@ BTN_TICK_STATE_T btn_state_tick(uint gpio)
 
     btn_state.released = true;
   }
-  else if (!btn_prev_pressed && btn_state.pressed)
+  else if (!btn->btn_prev_pressed && btn_state.pressed)
   {
     // Just started pressing
-    btn_press_began = get_absolute_time();
+    btn->btn_press_began = get_absolute_time();
   }
   else if (btn_state.pressed && elapsed_since_press_us > LONG_HOLD_THRESHOLD_MS * 1000)
   {
     btn_state.long_hold = true;
   }
 
-  btn_prev_pressed = btn_state.pressed;
+  btn->btn_prev_pressed = btn_state.pressed;
 
   return btn_state;
 }

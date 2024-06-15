@@ -1,3 +1,5 @@
+#include "pico/stdlib.h"
+
 #ifndef _BTN_STATE_H
 #define _BTN_STATE_H
 
@@ -10,6 +12,13 @@ typedef enum
   SHORT_PRESS,
 } BTN_PRESS_TYPE_T;
 
+typedef struct 
+{
+  uint gpio;
+  bool btn_prev_pressed;
+  absolute_time_t btn_press_began;
+} BTN_T;
+
 typedef struct
 {
   bool released;
@@ -18,6 +27,7 @@ typedef struct
   bool pressed;
 } BTN_TICK_STATE_T;
 
-BTN_TICK_STATE_T btn_state_tick(uint gpio);
+void init_btn(BTN_T *btn, uint gpio);
+BTN_TICK_STATE_T btn_state_tick(BTN_T *btn);
 
 #endif
