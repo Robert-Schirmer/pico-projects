@@ -22,6 +22,13 @@
 
 #define POLL_TIME_S 5
 
+typedef struct TCP_SERVER_RESPONSE_T_
+{
+    bool success;
+    char *data;
+    int data_len;
+} TCP_SERVER_RESPONSE_T;
+
 typedef struct TCP_CLIENT_T_
 {
     struct tcp_pcb *tcp_pcb;
@@ -32,17 +39,11 @@ typedef struct TCP_CLIENT_T_
     bool connected;
     int status;
     char *initial_msg;
+    void (*complete_callback)(TCP_SERVER_RESPONSE_T *res);
 } TCP_CLIENT_T;
-
-typedef struct TCP_SERVER_RESPONSE_T_
-{
-    bool success;
-    char *data;
-    int data_len;
-} TCP_SERVER_RESPONSE_T;
 
 void free_response(TCP_SERVER_RESPONSE_T *res);
 
-TCP_SERVER_RESPONSE_T *send_to_server(char *msg);
+void send_to_server(char *data, void (*complete_callback)(TCP_SERVER_RESPONSE_T *res));
 
 #endif

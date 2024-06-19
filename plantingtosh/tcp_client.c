@@ -39,7 +39,7 @@ static void dump_bytes(const uint8_t *bptr, uint32_t len)
 #define DUMP_BYTES(A, B)
 #endif
 
-#if 0
+#if 1
 #define DEBUG_printf printf
 #else
 static void empty_printf(const char *format, ...)
@@ -47,6 +47,37 @@ static void empty_printf(const char *format, ...)
 }
 #define DEBUG_printf empty_printf
 #endif
+
+static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
+{
+    TCP_SERVER_RESPONSE_T *response = calloc(1, sizeof(TCP_SERVER_RESPONSE_T));
+
+    if (state->status == 0)
+    {
+        DEBUG_printf("response_result success\n");
+        response->success = true;
+        DEBUG_printf("response_result copying used bytes in buffer to response: %d\n", state->buffer_len);
+        DEBUG_printf("response_result buffer: %s\n", state->buffer);
+        response->data_len = state->buffer_len;
+        response->data = malloc(state->buffer_len + 1);
+        memcpy(response->data, state->buffer, state->buffer_len);
+        response->data[state->buffer_len] = '\0';
+
+        return response;
+    }
+
+    DEBUG_printf("response_result failed\n");
+    response->success = false;
+    char *error_msg = "Response error (";
+    char error_code[2];
+    sprintf(error_code, "%d", state->status);
+    char *error_msg_close = ")";
+    response->data = malloc(strlen(error_msg) + strlen(error_code) + strlen(error_msg_close) + 1);
+    strcpy(response->data, error_msg);
+    strcat(response->data, error_code);
+    strcat(response->data, error_msg_close);
+    return response;
+}
 
 static err_t tcp_client_close(void *arg)
 {
@@ -68,6 +99,13 @@ static err_t tcp_client_close(void *arg)
         }
         state->tcp_pcb = NULL;
     }
+
+    free(state->initial_msg);
+
+    state->complete_callback(response_result(state));
+
+    free(state);
+
     return err;
 }
 
@@ -85,6 +123,7 @@ static err_t tcp_result(void *arg, int status)
     }
     state->complete = true;
     state->status = status;
+
     return tcp_client_close(arg);
 }
 
@@ -226,37 +265,6 @@ static TCP_CLIENT_T *tcp_client_init(void)
     return state;
 }
 
-static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
-{
-    TCP_SERVER_RESPONSE_T *response = calloc(1, sizeof(TCP_SERVER_RESPONSE_T));
-
-    if (state->status == 0)
-    {
-        DEBUG_printf("response_result success\n");
-        response->success = true;
-        DEBUG_printf("response_result copying used bytes in buffer to response: %d\n", state->buffer_len);
-        DEBUG_printf("response_result buffer: %s\n", state->buffer);
-        response->data_len = state->buffer_len;
-        response->data = malloc(state->buffer_len + 1);
-        memcpy(response->data, state->buffer, state->buffer_len);
-        response->data[state->buffer_len] = '\0';
-
-        return response;
-    }
-
-    DEBUG_printf("response_result failed\n");
-    response->success = false;
-    char *error_msg = "Response error (";
-    char error_code[2];
-    sprintf(error_code, "%d", state->status);
-    char *error_msg_close = ")";
-    response->data = malloc(strlen(error_msg) + strlen(error_code) + strlen(error_msg_close) + 1);
-    strcpy(response->data, error_msg);
-    strcat(response->data, error_code);
-    strcat(response->data, error_msg_close);
-    return response;
-}
-
 void free_response(TCP_SERVER_RESPONSE_T *res)
 {
     if (res)
@@ -271,43 +279,20 @@ void free_response(TCP_SERVER_RESPONSE_T *res)
     }
 }
 
-TCP_SERVER_RESPONSE_T *send_to_server(char *data)
+void send_to_server(char *data, void (*complete_callback)(TCP_SERVER_RESPONSE_T *res))
 {
     TCP_CLIENT_T *state = tcp_client_init();
     if (!state)
     {
-        return response_result(state);
+        complete_callback(response_result(state));
     }
 
-    state->initial_msg = data;
+    state->initial_msg = malloc(strlen(data) + 1);
+    strcpy(state->initial_msg, data);
+    state->complete_callback = complete_callback;
 
     if (!tcp_client_open(state))
     {
         tcp_result(state, ERR_RST);
-        TCP_SERVER_RESPONSE_T *response = response_result(state);
-        free(state);
-        return response;
     }
-    DEBUG_printf("send_to_server polling\n");
-
-    while (!state->complete)
-    {
-        // the following #ifdef is only here so this same example can be used in multiple modes;
-        // you do not need it in your code
-        // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
-        // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
-
-        // This poll hangs if there is a disconnect (-14 ERR_RST, others?) to the server followed by another successful request to the server
-        // followed by another request, the connection never connects and infinetly hangs
-        cyw43_arch_poll();
-        // you can poll as often as you like, however if you have nothing else to do you can
-        // choose to sleep until either a specified time, or cyw43_arch_poll() has work to do:
-        cyw43_arch_wait_for_work_until(make_timeout_time_ms(10));
-    }
-
-    TCP_SERVER_RESPONSE_T *response = response_result(state);
-
-    free(state);
-
-    return response;
 }

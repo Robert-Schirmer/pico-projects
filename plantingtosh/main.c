@@ -40,6 +40,13 @@ static void empty_printf(const char *format, ...)
 #define DEBUG_printf empty_printf
 #endif
 
+void request_complete_callback(TCP_SERVER_RESPONSE_T *res)
+{
+    printf("request_complete_callback, request complete, success: %d\n", res->success);
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+    free_response(res);
+}
+
 void log_plant_stats()
 {
     PLANT_STATS_T *stats = get_current_stats();
@@ -50,9 +57,7 @@ void log_plant_stats()
     if (WIFI_ENABLED)
     {
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        TCP_SERVER_RESPONSE_T *res = send_to_server(serialized);
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-        free_response(res);
+        send_to_server(serialized, request_complete_callback);
     }
 
     free(stats);
