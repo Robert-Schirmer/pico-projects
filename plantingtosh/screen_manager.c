@@ -22,10 +22,11 @@ static void empty_printf(const char *format, ...)
 
 static const int sleep_screen_id = -1;
 static const int boot_screen_id = 0;
-static const int plant_stats_screen_id = 1;
-static const int info_screen_id = 2;
+static const int plant_temp_screen_id = 1;
+static const int plant_moisture_screen_id = 2;
+static const int info_screen_id = 3;
 
-static const int first_screen_id = plant_stats_screen_id;
+static const int first_screen_id = plant_temp_screen_id;
 static const int last_screen_id = info_screen_id;
 
 static int current_screen = boot_screen_id;
@@ -70,58 +71,10 @@ void info_screen_handle_event(EVENT_T event)
   }
 }
 
-void refresh_show_plant_stats()
-{
-  DEBUG_printf("refresh_show_plant_stats\n");
-  PLANT_STATS_T *stats = get_current_stats();
-
-  int temp_tenths = temp_unit == CELCIUS ? stats->temp : (stats->temp * 9) / 5 + 320;
-
-  char *temp_prefix = "Temp  : ";
-  // 1 for the decimal point, 1 for space between number and temp_unit, 1 for temp_unit character 1 for null terminator
-  char *temp_str = malloc(strlen(temp_prefix) + get_number_length(temp_tenths) + 2 + 1 + 1);
-  sprintf(temp_str, "%s%d.%d ", temp_prefix, temp_tenths / 10, temp_tenths % 10);
-  if (temp_unit == FAHRENHEIT)
-  {
-    strcat(temp_str, "F");
-  }
-  else
-  {
-    strcat(temp_str, "C");
-  }
-
-  char *moisture_prefix = "Moist : ";
-  char *moisture_str = malloc(strlen(moisture_prefix) + get_number_length(stats->capacitence) + 1);
-  sprintf(moisture_str, "%s%d", moisture_prefix, stats->capacitence);
-
-  ssd1306_clear_square(&disp, X_SPLIT_POINT, 0, SCREEN_WIDTH - X_SPLIT_POINT, SCREEN_HEIGHT);
-  ssd1306_draw_string(&disp, X_SPLIT_POINT, FIRST_LINE, 1, temp_str);
-  ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 1, moisture_str);
-  ssd1306_show(&disp);
-
-  DEBUG_printf("refresh_show_plant_stats, %s\n", temp_str);
-  DEBUG_printf("refresh_show_plant_stats, %s\n", moisture_str);
-
-  free(stats);
-  free(temp_str);
-  free(moisture_str);
-
-  DEBUG_printf("refresh_plant_status, done\n");
-}
-
 absolute_time_t last_jump_time;
 bool jumping = false;
 int jump_every_ms = 10 * 1000;
 int hang_time_ms = 300;
-
-void plant_stats_screen_entry()
-{
-  jumping = false;
-  last_jump_time = get_absolute_time();
-  ssd1306_clear(&disp);
-  draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[3]);
-  refresh_show_plant_stats();
-}
 
 static void update_jumping_animation()
 {
@@ -144,9 +97,80 @@ static void update_jumping_animation()
   }
 }
 
-void plant_stats_screen_handle_event(EVENT_T event)
+void refresh_show_temp()
 {
-  if (current_screen != plant_stats_screen_id)
+  DEBUG_printf("refresh_show_temp\n");
+  PLANT_STATS_T *stats = get_current_stats();
+
+  int temp_tenths = temp_unit == CELCIUS ? stats->temp : (stats->temp * 9) / 5 + 320;
+
+  // 1 for the decimal point, 1 for space between number and temp_unit, 1 for temp_unit character 1 for null terminator
+  char *temp_str = malloc(get_number_length(temp_tenths) + 2 + 1 + 1);
+  sprintf(temp_str, "%d.%d ", temp_tenths / 10, temp_tenths % 10);
+  if (temp_unit == FAHRENHEIT)
+  {
+    strcat(temp_str, "F");
+  }
+  else
+  {
+    strcat(temp_str, "C");
+  }
+
+  ssd1306_clear_square(&disp, X_SPLIT_POINT, 0, SCREEN_WIDTH - X_SPLIT_POINT, SCREEN_HEIGHT);
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, FIRST_LINE, 1, "Temp");
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 2, temp_str);
+  ssd1306_show(&disp);
+
+  DEBUG_printf("refresh_show_temp, %s\n", temp_str);
+
+  free(stats);
+  free(temp_str);
+
+  DEBUG_printf("refresh_show_temp, done\n");
+}
+
+void refresh_show_moisture()
+{
+  DEBUG_printf("refresh_show_moisture\n");
+  PLANT_STATS_T *stats = get_current_stats();
+
+  char *moisture_str = malloc(get_number_length(stats->capacitence) + 1);
+  sprintf(moisture_str, "%d", stats->capacitence);
+
+  ssd1306_clear_square(&disp, X_SPLIT_POINT, 0, SCREEN_WIDTH - X_SPLIT_POINT, SCREEN_HEIGHT);
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, FIRST_LINE, 1, "Moisture");
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 2, moisture_str);
+  ssd1306_show(&disp);
+
+  DEBUG_printf("refresh_show_moisture, %s\n", moisture_str);
+
+  free(stats);
+  free(moisture_str);
+
+  DEBUG_printf("refresh_show_moisture, done\n");
+}
+
+void plant_temp_screen_entry()
+{
+  jumping = false;
+  last_jump_time = get_absolute_time();
+  ssd1306_clear(&disp);
+  draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[3]);
+  refresh_show_temp();
+}
+
+void plant_moisture_screen_entry()
+{
+  jumping = false;
+  last_jump_time = get_absolute_time();
+  ssd1306_clear(&disp);
+  draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[3]);
+  refresh_show_moisture();
+}
+
+void plant_temp_screen_handle_event(EVENT_T event)
+{
+  if (current_screen != plant_temp_screen_id)
   {
     return;
   }
@@ -154,11 +178,31 @@ void plant_stats_screen_handle_event(EVENT_T event)
   switch (event)
   {
   case BTN_1_SHORT_PRESS:
-    refresh_show_plant_stats();
+    refresh_show_temp();
     break;
   case BTN_1_LONG_PRESS:
     temp_unit = temp_unit == FAHRENHEIT ? CELCIUS : FAHRENHEIT;
-    refresh_show_plant_stats();
+    refresh_show_temp();
+  case NONE:
+    update_jumping_animation();
+    break;
+  default:
+    break;
+  }
+}
+
+void plant_moisture_screen_handle_event(EVENT_T event)
+{
+  if (current_screen != plant_moisture_screen_id)
+  {
+    return;
+  }
+
+  switch (event)
+  {
+  case BTN_1_SHORT_PRESS:
+    refresh_show_moisture();
+    break;
   case NONE:
     update_jumping_animation();
     break;
@@ -182,8 +226,11 @@ static void next_screen()
 
   switch (current_screen)
   {
-  case plant_stats_screen_id:
-    plant_stats_screen_entry();
+  case plant_temp_screen_id:
+    plant_temp_screen_entry();
+    break;
+  case plant_moisture_screen_id:
+    plant_moisture_screen_entry();
     break;
   case info_screen_id:
     info_screen_entry();
@@ -208,7 +255,7 @@ static bool handle_sleep_check(EVENT_T event)
     {
       current_screen = first_screen_id;
       ssd1306_poweron(&disp);
-      plant_stats_screen_entry();
+      plant_temp_screen_entry();
     }
     else
     {
@@ -238,8 +285,9 @@ void handle_event_on_screen(EVENT_T event)
     next_screen();
     break;
   default:
-    plant_stats_screen_handle_event(event);
+    plant_temp_screen_handle_event(event);
     info_screen_handle_event(event);
+    plant_moisture_screen_handle_event(event);
     break;
   }
 }

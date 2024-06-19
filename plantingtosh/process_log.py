@@ -67,8 +67,8 @@ print(f"Samples per hour: {round(avg_samples_per_hour, 2)}")
 # Perform filtering of signal to smooth out noise
 window_size = round(avg_samples_per_hour / 2)
 window_size = window_size + 1 if window_size % 2 == 0 else window_size
-temp_filtered = signal.savgol_filter(temp, window_size, 1)
 
+temp_filtered = signal.savgol_filter(temp, window_size, 1)
 capacitence_filtered = signal.savgol_filter(capacitence, window_size, 1)
 
 # Perform interpolation
