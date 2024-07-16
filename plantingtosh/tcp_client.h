@@ -27,6 +27,7 @@ typedef struct TCP_SERVER_RESPONSE_T_
     bool success;
     char *data;
     int data_len;
+    int status;
 } TCP_SERVER_RESPONSE_T;
 
 typedef struct TCP_CLIENT_T_

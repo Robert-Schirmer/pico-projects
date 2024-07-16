@@ -1,14 +1,19 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
+#include "app_macros.h"
+#include "app_queues.h"
+#include "background_tasks.h"
 #include "board_id.h"
 #include "events.h"
 #include "flowering.c"
 #include "plant_stats.h"
+#include "pico/util/queue.h"
 #include "screen_manager.h"
 #include "screen_size.h"
 #include "ssd1306.h"
+#include "tcp_client.h"
 #include "utils.h"
 
 #if 1
@@ -25,9 +30,10 @@ static const int boot_screen_id = 0;
 static const int plant_temp_screen_id = 1;
 static const int plant_moisture_screen_id = 2;
 static const int info_screen_id = 3;
+static const int ping_screen_id = 4;
 
 static const int first_screen_id = plant_temp_screen_id;
-static const int last_screen_id = info_screen_id;
+static const int last_screen_id = ping_screen_id;
 
 static int current_screen = boot_screen_id;
 
@@ -211,6 +217,90 @@ void plant_moisture_screen_handle_event(EVENT_T event)
   }
 }
 
+void ping_server_callback(TCP_SERVER_RESPONSE_T *res)
+{
+  printf("ping_server_callback, request complete, success: %d\n", res->success);
+  cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+
+  if (current_screen == ping_screen_id)
+  {
+    ssd1306_clear_square(&disp, X_SPLIT_POINT, 0, SCREEN_WIDTH - X_SPLIT_POINT, SCREEN_HEIGHT);
+    ssd1306_draw_string(&disp, X_SPLIT_POINT, FIRST_LINE, 1, "Connection");
+
+    if (res->success)
+    {
+      char *msg = "- success";
+      ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 1, msg);
+      ssd1306_draw_string(&disp, X_SPLIT_POINT, THIRD_LINE, 1, res->data);
+    }
+    else
+    {
+      char *msg = "- failed";
+      ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 1, msg);
+      char error_code[2];
+      sprintf(error_code, "%d", res->status);
+      ssd1306_draw_string(&disp, X_SPLIT_POINT, THIRD_LINE, 1, error_code);
+    }
+
+    ssd1306_show(&disp);
+  }
+
+  free_response(res);
+}
+
+void ping_server()
+{
+  char *msg = "PING\n";
+  cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+  send_to_server(msg, ping_server_callback);
+}
+
+void test_server_connection()
+{
+  ssd1306_clear_square(&disp, X_SPLIT_POINT, 0, SCREEN_WIDTH - X_SPLIT_POINT, SCREEN_HEIGHT);
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, FIRST_LINE, 1, "Connection");
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 1, "- pinging...");
+  ssd1306_show(&disp);
+
+  BACKGROUND_QUEUE_T entry = {ping_server};
+  queue_try_add(&background_queue, &entry);
+}
+
+void ping_screen_entry()
+{
+  ssd1306_clear(&disp);
+  draw_frame(&disp, FLOWERING_FRAME_HEIGHT, FLOWERING_FRAME_WIDTH, flowering_data[2]);
+  ssd1306_draw_string(&disp, X_SPLIT_POINT, FIRST_LINE, 1, "Connection");
+  if (WIFI_ENABLED)
+  {
+    ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 1, "Press btn to");
+    ssd1306_draw_string(&disp, X_SPLIT_POINT, THIRD_LINE, 1, "ping server");
+  }
+  else
+  {
+    ssd1306_draw_string(&disp, X_SPLIT_POINT, SECOND_LINE, 1, "Wifi disabled");
+  }
+  ssd1306_show(&disp);
+}
+
+void ping_screen_handle_event(EVENT_T event)
+{
+  if (current_screen != ping_screen_id || !WIFI_ENABLED)
+  {
+    return;
+  }
+
+  switch (event)
+  {
+  case BTN_1_SHORT_PRESS:
+    test_server_connection();
+    break;
+  case NONE:
+  default:
+    break;
+  }
+}
+
 static void next_screen()
 {
   DEBUG_printf("next_screen, current_screen: %d\n", current_screen);
@@ -234,6 +324,9 @@ static void next_screen()
     break;
   case info_screen_id:
     info_screen_entry();
+    break;
+  case ping_screen_id:
+    ping_screen_entry();
     break;
   default:
     printf("next_screen, invalid screen %d\n", current_screen);
@@ -288,6 +381,7 @@ void handle_event_on_screen(EVENT_T event)
     plant_temp_screen_handle_event(event);
     info_screen_handle_event(event);
     plant_moisture_screen_handle_event(event);
+    ping_screen_handle_event(event);
     break;
   }
 }

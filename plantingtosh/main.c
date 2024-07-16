@@ -5,6 +5,8 @@
 #include "board_id.h"
 #include "btnstate.h"
 #include "events.h"
+#include "app_macros.h"
+#include "app_queues.h"
 #include "flowering.c"
 #include "hardware/i2c.h"
 #include "hardware/watchdog.h"
@@ -21,13 +23,6 @@
 #include "tcp_client.h"
 #include "wifi_cred.h"
 #include "utils.h"
-
-#define WIFI_ENABLED true
-#define BUTTON_PIN_1 9
-#define BUTTON_PIN_2 6
-
-queue_t event_queue;
-queue_t background_queue;
 
 int wd_counter __attribute__((section(".unitialized_data")));
 

@@ -36,6 +36,7 @@ add_executable(${PROJECT_NAME}
     screen_manager.c
     board_id.c
     utils.c
+    app_queues.c
 )
 
 # Create map/bin/hex/uf2 files

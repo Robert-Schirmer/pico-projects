@@ -51,6 +51,7 @@ static void empty_printf(const char *format, ...)
 static TCP_SERVER_RESPONSE_T *response_result(TCP_CLIENT_T *state)
 {
     TCP_SERVER_RESPONSE_T *response = calloc(1, sizeof(TCP_SERVER_RESPONSE_T));
+    response->status = state->status;
 
     if (state->status == 0)
     {

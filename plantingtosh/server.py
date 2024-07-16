@@ -40,12 +40,23 @@ class echohandler(StreamRequestHandler):
             msg_string = msg_bytes.decode('utf-8').strip()
             print(f'Received: {msg_string}, Session number: {Counter.count()}')
             
-            f = open("log.txt", "a")
-            f.write(f"received={time_now_ms()},{msg_string}\n")
-            f.close()
+            if msg_string == "PING":
+                self.handle_ping()
+            else:
+                self.handle_stats(msg_string)
 
-            self.wfile.write(str.encode("END"))
-            self.wfile.flush()
+    def handle_ping(self):
+        self.wfile.write(str.encode("Server says hi!"))
+        self.wfile.write(str.encode("END"))
+        self.wfile.flush()
+
+    def handle_stats(self, msg_string):
+        f = open("log.txt", "a")
+        f.write(f"received={time_now_ms()},{msg_string}\n")
+        f.close()
+
+        self.wfile.write(str.encode("END"))
+        self.wfile.flush()
 
 server = MyTCPServer((SERVER_ADDR,SERVER_PORT),echohandler)
 print(f'Server listening on {SERVER_ADDR}:{SERVER_PORT}')
