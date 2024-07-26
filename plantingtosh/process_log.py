@@ -6,6 +6,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy import signal
 import time
+import sys
 
 class BackwardsReader:
   def readline(self):
@@ -63,7 +64,7 @@ timestamps = []
 
 start = time.time()
 
-log_file = "log.txt"
+log_file = f"log_{sys.argv[1]}.txt"
 
 backwards_reader = BackwardsReader(log_file)
 
@@ -99,10 +100,6 @@ while not done:
   if capacitence < 100 or capacitence > 600:
     bad_data.append(fields)
     continue
-    
-  # Only one plant for now with this ID, so all data is for this plant
-  if fields.get('plant_id') != 'E6616408435E092D':
-    fields['plant_id'] = 'E6616408435E092D'
 
   timestamp = int(fields.get('received')) / 1000
 

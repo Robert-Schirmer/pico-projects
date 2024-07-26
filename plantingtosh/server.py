@@ -3,13 +3,16 @@
 from socketserver import ThreadingTCPServer,StreamRequestHandler
 import socket
 import time
+import logging
+import uuid
 
 # Set server adress to machines IP
 SERVER_ADDR = "192.168.1.220"
 SERVER_PORT = 4242
 
-# These constants should match the client
-BUF_SIZE = 2048
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO)
 
 def time_now_ms():
     return int(time.time() * 1000)
@@ -29,16 +32,19 @@ class Counter():
 
 class echohandler(StreamRequestHandler):
     def handle(self):
-        print(f'Connected: {self.client_address[0]}:{self.client_address[1]}')
+        self.request_number = Counter.count()
+        self.request_id = uuid.uuid4()
+
+        logging.info(f'{self.request_id} Connected: {self.client_address[0]}:{self.client_address[1]}, Session number: {self.request_number}')
         while True:
             # get message
             msg_bytes = self.rfile.readline()
             if not msg_bytes:
-                print(f'Disconnected: {self.client_address[0]}:{self.client_address[1]}')
+                logging.info(f'{self.request_id} Disconnected: {self.client_address[0]}:{self.client_address[1]}')
                 break # exits handler, framework closes socket
 
             msg_string = msg_bytes.decode('utf-8').strip()
-            print(f'Received: {msg_string}, Session number: {Counter.count()}')
+            logging.info(f'{self.request_id} Received: {msg_string}')
             
             if msg_string == "PING":
                 self.handle_ping()
@@ -46,18 +52,43 @@ class echohandler(StreamRequestHandler):
                 self.handle_stats(msg_string)
 
     def handle_ping(self):
-        self.wfile.write(str.encode("Server says hi!"))
-        self.wfile.write(str.encode("END"))
-        self.wfile.flush()
+        self.write("Server says hi!")
+        self.write("END")
+        self.write_flush()
 
     def handle_stats(self, msg_string):
-        f = open("log.txt", "a")
+        parsed_msg = self.parse_msg(msg_string)
+
+        plant_id = parsed_msg.get('plant_id')
+        
+        file_name = plant_id if plant_id else "unknown"
+        
+        f = open(f"log_{file_name}.txt", "a+")
         f.write(f"received={time_now_ms()},{msg_string}\n")
         f.close()
 
-        self.wfile.write(str.encode("END"))
+        self.write("END")
+        self.write_flush()
+
+    def parse_msg(self, msg_string):
+        fields = {}
+        fields_list = msg_string.strip().split(',')
+        
+        for field in fields_list:
+            key, value = field.split('=')
+            fields[key] = value
+            
+        return fields
+    
+    def write(self, msg):
+        logging.info(f'{self.request_id} Sending: {msg}')
+        self.wfile.write(str.encode(msg))
+    
+    def write_flush(self):
+        logging.info(f"{self.request_id} Sending Flushed")
         self.wfile.flush()
 
+
 server = MyTCPServer((SERVER_ADDR,SERVER_PORT),echohandler)
-print(f'Server listening on {SERVER_ADDR}:{SERVER_PORT}')
+logging.info(f'Server listening on {SERVER_ADDR}:{SERVER_PORT}')
 server.serve_forever()
