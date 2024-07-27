@@ -3,7 +3,10 @@
 
 #define WIFI_ENABLED true
 
-#define BUTTON_PIN_1 9
-#define BUTTON_PIN_2 6
+#define BUTTON_PIN_1 19
+#define BUTTON_PIN_2 18
+
+#define SDA_PIN 0
+#define SCL_PIN 1
 
 #endif

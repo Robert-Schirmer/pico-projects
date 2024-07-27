@@ -151,7 +151,7 @@ d_capacitence_smooth = np.gradient(capacitence_smooth)
 water_time_cooldown = 60 * 60 * 3 # seconds
 last_water_time = 0 # seconds
 # Amount of change in capacitence to trigger a water event
-d_capacitence_for_watering = 10
+d_capacitence_for_watering = 5
 
 water_markers = []
 

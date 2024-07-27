@@ -89,15 +89,13 @@ void core1_entry()
 
 void setup_gpios(void)
 {
-    uint sda_pin = 16;
-    uint scl_pin = 17;
     uint baudrate = 400 * 1000;
 
     i2c_init(i2c0, baudrate);
-    gpio_set_function(sda_pin, GPIO_FUNC_I2C);
-    gpio_set_function(scl_pin, GPIO_FUNC_I2C);
-    gpio_pull_up(sda_pin);
-    gpio_pull_up(scl_pin);
+    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA_PIN);
+    gpio_pull_up(SCL_PIN);
 }
 
 void connect_wifi()
@@ -202,11 +200,15 @@ int main()
 
     show_boot_screen_sequence(2);
 
-    int btn_1_long_press = BTN_1_LONG_PRESS;
     int btn_1_short_press = BTN_1_SHORT_PRESS;
-    int btn_2_long_hold = BTN_2_LONG_HOLD;
-    int btn_2_short_press = BTN_2_SHORT_PRESS;
+    int btn_1_long_press = BTN_1_LONG_PRESS;
+    int btn_1_long_hold = BTN_1_LONG_HOLD;
 
+    int btn_2_short_press = BTN_2_SHORT_PRESS;
+    int btn_2_long_press = BTN_2_LONG_PRESS;
+    int btn_2_long_hold = BTN_2_LONG_HOLD;
+
+    bool btn_1_long_hold_handled = false;
     bool btn_2_long_hold_handled = false;
 
     while (true)
@@ -218,14 +220,26 @@ int main()
 
         if (btn_1_state.released)
         {
-            if (LONG_PRESS == btn_1_state.release_type)
+            if (btn_1_long_hold_handled)
             {
-                queue_try_add(&event_queue, &btn_1_long_press);
+                // Long hold already handled this release, reset
+                btn_1_long_hold_handled = false;
             }
             else if (SHORT_PRESS == btn_1_state.release_type)
             {
                 queue_try_add(&event_queue, &btn_1_short_press);
             }
+            else if (LONG_PRESS == btn_1_state.release_type)
+            {
+                queue_try_add(&event_queue, &btn_1_long_press);
+            }
+        }
+        else if (btn_1_state.long_hold && !btn_1_long_hold_handled)
+        {
+            // Flag the long hold as handled so button release doesn't
+            // trigger another handling
+            btn_1_long_hold_handled = true;
+            queue_try_add(&event_queue, &btn_1_long_hold);
         }
 
         if (btn_2_state.released)
@@ -238,6 +252,10 @@ int main()
             else if (SHORT_PRESS == btn_2_state.release_type)
             {
                 queue_try_add(&event_queue, &btn_2_short_press);
+            }
+            else if (LONG_PRESS == btn_2_state.release_type)
+            {
+                queue_try_add(&event_queue, &btn_2_long_press);
             }
         }
         else if (btn_2_state.long_hold && !btn_2_long_hold_handled)

@@ -37,6 +37,10 @@ add_executable(${PROJECT_NAME}
     board_id.c
     utils.c
     app_queues.c
+    screens/boot_screens.c
+    screens/plant_stats_screens.c
+    screens/settings_screens.c
+    screens/sleep_screens.c
 )
 
 # Create map/bin/hex/uf2 files
