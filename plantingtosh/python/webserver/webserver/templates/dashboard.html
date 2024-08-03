@@ -1,0 +1,89 @@
+<html>
+
+<head>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      margin: 5%;
+      background-color: rgb(157, 197, 169);
+      display: flex;
+      justify-content: center;
+    }
+
+    .dashboard-container {
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    .dashboard-header {
+      padding-left: 10px;
+    }
+
+    h1 {
+      color: rgb(42, 80, 57);
+      line-height: 8px;
+      font-size: 6em;
+    }
+
+    h2 {
+      color: rgb(65, 108, 83);
+      font-size: 3.25em;
+    }
+
+    h4 {
+      color: rgb(12, 88, 50);
+      font-size: 3em;
+    }
+
+    p {
+      color: #222222;
+      font-size: 2.5em;
+    }
+
+    .info {
+      font-size: 0.8em
+    }
+
+    .plant-body {
+      background-color: rgb(201, 223, 206);
+      border-radius: 18px;
+      margin-bottom: 20px;
+      padding-left: 40px;
+      padding-top: 1px;
+      padding-bottom: 22px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <div class="dashboard-header">
+      <h1>Dashboard</h1>
+      <h2>Welcome to your plantingtosh!</h2>
+    </div>
+
+
+    {% for plant in plant_data %}
+
+    <div class="plant-body">
+      <h4>
+        {{ plant.name }} ({{ plant.type }})
+      </h4>
+      <p>
+        Temp: <strong>{{ plant.temp }}°F</strong>
+      </p>
+      <p>
+        Moist: <strong>{{ plant.capacitence }}</strong>
+      </p>
+      <p class="info">
+        ID: {{ plant.id }}
+      </p>
+      <p class="info">
+        {{ plant.last_updated }}
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+</body>
+
+</html>

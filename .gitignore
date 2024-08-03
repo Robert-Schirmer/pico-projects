@@ -1,4 +1,5 @@
 build
 .vscode
 python-env
-log*
+**/plant_logs/**
+__pycache__
