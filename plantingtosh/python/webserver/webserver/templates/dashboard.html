@@ -33,24 +33,46 @@
     h4 {
       color: rgb(12, 88, 50);
       font-size: 3em;
+      margin: 0px;
     }
 
     p {
       color: #222222;
       font-size: 2.5em;
+      margin: 0px;
     }
 
     .info {
-      font-size: 0.8em
+      font-size: 0.8em;
+    }
+
+    .last-watered {
+      font-size: 1.5em;
     }
 
     .plant-body {
       background-color: rgb(201, 223, 206);
       border-radius: 18px;
       margin-bottom: 20px;
-      padding-left: 40px;
-      padding-top: 1px;
-      padding-bottom: 22px;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 2em;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .plant-header-row {
+      margin-bottom: 40px;
+    }
+
+    .plant-char-btn-row {
+      display: flex;
+      justify-content: flex-end;
     }
   </style>
 </head>
@@ -61,29 +83,200 @@
       <h1>Dashboard</h1>
       <h2>Welcome to your plantingtosh!</h2>
     </div>
-
-
     {% for plant in plant_data %}
-
     <div class="plant-body">
-      <h4>
-        {{ plant.name }} ({{ plant.type }})
-      </h4>
-      <p>
-        Temp: <strong>{{ plant.temp }}°F</strong>
-      </p>
-      <p>
-        Moist: <strong>{{ plant.capacitence }}</strong>
-      </p>
-      <p class="info">
-        ID: {{ plant.id }}
-      </p>
-      <p class="info">
-        {{ plant.last_updated }}
-      </p>
+      <div class="plant-header-row">
+        <h4>
+          {{ plant.name }} ({{ plant.type }})
+        </h4>
+      </div>
+      <div class="stat-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="50px" height="50px" viewBox="0 0 24 22" fill="none">
+          <path
+            d="M12 15.9998C11.4477 15.9998 11 16.4475 11 16.9998C11 17.5521 11.4477 17.9998 12 17.9998C12.5523 17.9998 13 17.5521 13 16.9998C13 16.4475 12.5523 15.9998 12 15.9998ZM12 15.9998V12M12 16.9998L12.0071 17.0069M16 16.9998C16 19.209 14.2091 20.9998 12 20.9998C9.79086 20.9998 8 19.209 8 16.9998C8 15.9854 8.37764 15.0591 9 14.354L9 6C9 4.34315 10.3431 3 12 3C13.6569 3 15 4.34315 15 6V14.354C15.6224 15.0591 16 15.9854 16 16.9998Z"
+            stroke="#f4233d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <p>
+          <strong>{{ plant.temp }}°F</strong>
+        </p>
+      </div>
+      <div class="stat-row">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="#3e95cd" version="1.1"
+          id="Capa_1" width="50px" height="50px" viewBox="0 0 264.564 264.564" xml:space="preserve">
+          <g>
+            <g>
+              <path
+                d="M132.281,264.564c51.24,0,92.931-41.681,92.931-92.918c0-50.18-87.094-164.069-90.803-168.891L132.281,0l-2.128,2.773    c-3.704,4.813-90.802,118.71-90.802,168.882C39.352,222.883,81.042,264.564,132.281,264.564z" />
+            </g>
+          </g>
+        </svg>
+        <p>
+          <strong>{{ plant.capacitence }}</strong>
+        </p>
+        <p class="last-watered" id="{{ plant.id }}-last-watered"></p>
+      </div>
+      <div class="plant-char-btn-row">
+        <button onclick="toggleTemp('{{ plant.id }}')">Toggle temp</button>
+      </div>
+      <canvas id="{{ plant.id }}-chart"></canvas>
+      <div>
+        <p class="info" id="{{ plant.id }}-updated">
+        <p class="info">
+          {{ plant.id }}
+        </p>
+        </p>
+      </div>
     </div>
     {% endfor %}
   </div>
 </body>
+
+{{ plant_data|json_script:"plant-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@^4"></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@^3"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+<script>
+
+  function toggleTemp(plantId) {
+    const chart = Chart.getChart(`${plantId}-chart`);
+
+    if (chart.options.scales.yTemp.display) {
+      chart.setDatasetVisibility(0, false);
+      chart.options.scales.yTemp.display = false;
+    } else {
+      chart.setDatasetVisibility(0, true);
+      chart.options.scales.yTemp.display = true;
+    }
+
+    chart.update();
+  }
+
+  function loadPlantWidget(plant) {
+    const ctx = document.getElementById(`${plant.id}-chart`);
+
+    const capacitenceSeries = plant.capacitence_series.map((point, index) => {
+      return {
+        x: plant.time_series[index] * 1000,
+        y: point
+      }
+    });
+
+    const waterMarkers = plant.water_markers.reduce((acc, curr, index) => {
+      if (curr != null) {
+        acc.push({
+          x: plant.time_series[index] * 1000,
+          y: curr,
+        })
+      }
+
+      return acc;
+    }, []);
+
+    if (waterMarkers.at(-1)) {
+      document.getElementById(`${plant.id}-last-watered`).innerText = `(watered ${luxon.DateTime.fromMillis(waterMarkers.at(-1).x).toRelative()})`;
+    }
+
+    const lastUpdated = new Date(plant.last_updated * 1000);
+    document.getElementById(`${plant.id}-updated`).innerText = lastUpdated.toLocaleString();
+
+    const tempSeries = plant.temp_series.map((point, index) => {
+      return {
+        x: plant.time_series[index] * 1000,
+        y: point
+      }
+    });
+
+    // Extend data by half a day to make the chart look better
+    const extendByHours = 4
+
+    capacitenceSeries.push({
+      x: capacitenceSeries.at(-1).x + 60 * 60 * 1000 * extendByHours,
+      y: null
+    });
+    tempSeries.push({
+      x: tempSeries.at(-1).x + 60 * 60 * 1000 * extendByHours,
+      y: null
+    });
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            data: tempSeries,
+            borderColor: "#f4233d",
+            fill: false,
+            yAxisID: 'yTemp',
+          }, {
+            data: capacitenceSeries,
+            borderColor: "#3e95cd",
+            fill: false,
+            yAxisID: 'yCapacitence',
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          annotation: {
+            annotations: {
+              ...waterMarkers.reduce((acc, curr, index) => {
+                acc[`point${index + 1}`] = {
+                  type: 'point',
+                  xValue: curr.x,
+                  yValue: curr.y,
+                  borderColor: 'transparent',
+                  backgroundColor: 'rgba(62,149,205,0.50)',
+                }
+                return acc;
+              }, {})
+            }
+          },
+          legend: {
+            display: false,
+          },
+        },
+        elements: {
+          point: {
+            radius: 0,
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'day',
+              displayFormats: {
+                day: 'ccc'
+              }
+            }
+          },
+          yCapacitence: {
+            type: 'linear',
+            position: 'left',
+          },
+          yTemp: {
+            type: 'linear',
+            position: 'right',
+            grid: {
+              // only want the grid lines for one axis to show up
+              drawOnChartArea: false,
+            },
+          },
+        },
+      }
+    });
+
+    // Start with temp toggled off
+    toggleTemp(plant.id);
+  }
+
+  const plantData = JSON.parse(document.getElementById('plant-data').textContent);
+  plantData.forEach(loadPlantWidget);
+</script>
+
 
 </html>

@@ -1,11 +1,8 @@
-import datetime
 import os
 from typing import NamedTuple
-import json
-
 
 class LogLine(NamedTuple):
-    received: datetime
+    received: int
     temp: float
     capacitence: int
     plant_id: str
@@ -39,7 +36,7 @@ class BackwardsReader:
         # make it compatible with python <= 1.5.1
         line = self.data[-1]
         self.data = self.data[:-1]
-        return line + "\n"
+        return self.parseline(line + "\n")
 
     def parseline(self, line: str) -> LogLine:
         fields = {}
@@ -50,10 +47,8 @@ class BackwardsReader:
             fields[key] = value
 
         return LogLine(
-            received=datetime.datetime.fromtimestamp(
-                int(fields.get("received")) / 1000
-            ),
-            temp=float(fields.get("temp")) / 10,
+            received=int(fields.get("received")) / 1000,
+            temp=int(fields.get("temp")) / 10,
             capacitence=int(fields.get("capacitence")),
             plant_id=fields.get("plant_id"),
         )
@@ -80,27 +75,3 @@ class BackwardsReader:
         if not self.data[-1]:
             # self.data.pop()
             self.data = self.data[:-1]
-
-
-class PlantInfo(NamedTuple):
-    name: str
-    type: str
-
-
-class PlantInfos:
-    def __init__(self):
-        self.plant_info = self.load_plant_info()
-
-    def load_plant_info(self) -> dict[str, PlantInfo]:
-        f = open("./plant_logs/plant_info.json")
-        plant_info = json.load(f)
-        f.close()
-
-        plant_info_dict: dict[str, PlantInfo] = {}
-        for key, value in plant_info.items():
-            plant_info_dict[key] = PlantInfo(name=value["name"], type=value["type"])
-
-        return plant_info_dict
-
-    def get(self, plant_id: str) -> PlantInfo:
-        return self.plant_info.get(plant_id, PlantInfo(name="Unknown", type="Unknown"))

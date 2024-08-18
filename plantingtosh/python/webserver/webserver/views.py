@@ -1,5 +1,6 @@
+import datetime
 from django.views.generic.base import TemplateView
-from filereader import BackwardsReader, PlantInfos
+from plantinfos import PlantInfos
 import pytz
 
 EST = pytz.timezone("US/Eastern")
@@ -11,32 +12,39 @@ class HomePageView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        log_files = [
-            "./plant_logs/log_E6616408432F122D.txt",
-            "./plant_logs/log_E6616408435E092D.txt",
-        ]
+        load_days = self.get_days_to_load()
+
         context["plant_data"] = []
 
         plant_infos = PlantInfos()
 
-        for log_file in log_files:
-            reader = BackwardsReader(log_file)
-            log = reader.parseline(reader.readline())
-            reader.close()
+        for plant_id in plant_infos.get_plant_ids():
+            plant_info = plant_infos.get(plant_id)
 
-            plant_info = plant_infos.get(log.plant_id)
+            plant_info.stats.load(load_days)
+
+            last_log = plant_info.stats.last_log()
+            data_points = plant_info.stats.get_data_points()
 
             context["plant_data"].append(
                 {
-                    "last_updated": log.received.astimezone(EST).strftime(
-                        "%H:%M:%S %Y-%m-%d"
-                    ),
+                    "last_updated": last_log.get("timestamp"),
                     "name": plant_info.name,
                     "type": plant_info.type,
-                    "id": log.plant_id,
-                    "temp": round((log.temp * 9 / 5) + 32, 1),
-                    "capacitence": log.capacitence,
+                    "id": plant_id,
+                    "temp": round(last_log.get("temp"), 1),
+                    "temp_series": data_points.temp_smooth,
+                    "capacitence": last_log.get("capacitence"),
+                    "capacitence_series": data_points.capacitence_smooth,
+                    "time_series": data_points.resampled_timestamps,
+                    "water_markers": data_points.water_markers,
                 }
             )
 
         return context
+
+    def get_days_to_load(self) -> int:
+        try:
+            return int(self.request.GET.get("days"))
+        except:
+            return 21
