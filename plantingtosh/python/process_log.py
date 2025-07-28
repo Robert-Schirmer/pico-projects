@@ -56,7 +56,7 @@ def process_log(log_file, read_back_days=10):
 
         capacitence = line.capacitence
 
-        if capacitence < 100 or capacitence > 600:
+        if capacitence < 100 or capacitence > 1000:
             bad_data.append(line)
             continue
 
